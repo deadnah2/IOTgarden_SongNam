@@ -70,11 +70,25 @@ export class GardensService {
   async softDelete(id: number) {
     await this.findOne(id);
 
-    return this.prisma.garden.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-      },
+    const deletedAt = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.vegetable.updateMany({
+        where: {
+          gardenId: id,
+          deletedAt: null,
+        },
+        data: {
+          deletedAt,
+        },
+      });
+
+      return tx.garden.update({
+        where: { id },
+        data: {
+          deletedAt,
+        },
+      });
     });
   }
 }
