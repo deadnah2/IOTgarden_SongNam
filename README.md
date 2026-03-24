@@ -61,14 +61,14 @@ Xây dựng hệ thống IoT quản lý khu vườn bằng `NestJS + PostgreSQL 
 - `src/common/`
 - `src/prisma/`
 - `src/modules/auth/`
+- `src/modules/gardens/`
 - `src/modules/users/`
+- `src/modules/vegetables/`
 - `prisma/schema.prisma`
 - `prisma/migrations/`
 - `prisma.config.ts`
 
 Chưa làm:
-- `gardens/`
-- `vegetables/`
 - `sales/`
 - `reports/`
 - `mqtt/`
@@ -414,7 +414,7 @@ Logic chốt:
 
 ### Phase 3 - Garden & Vegetable Module
 
-Trạng thái: `TODO`
+Trạng thái: `DONE`
 
 Mục tiêu:
 - `GardensModule`
@@ -426,7 +426,7 @@ Mục tiêu:
 - `GardenOwnershipGuard` trong `common/guards`
 - `VegetablesModule`
   - `POST /vegetables`
-  - `GET /vegetables`
+  - `GET /vegetables?gardenId=`
   - `PUT /vegetables/:id`
   - `DELETE /vegetables/:id`
 - `PriceService` trong `VegetablesModule`
@@ -441,6 +441,7 @@ Logic chốt:
 - mọi query phải lọc `deletedAt: null`
 - user chỉ thấy garden của mình, admin thấy tất cả
 - mọi thao tác giá phải ghi `PriceHistory`
+- `GET /vegetables` yêu cầu `gardenId` để list rau theo đúng ngữ cảnh vườn
 
 ### Phase 4 - Sales & Reports Module
 
