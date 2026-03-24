@@ -172,6 +172,7 @@ Quan hệ:
 - `Garden -> User`
 - `Garden -> Vegetable[]`
 - `Garden -> SensorData[]`
+- `Sale.gardenId` tham chiếu Garden ở mức nghiệp vụ để phục vụ query/report, nhưng không khai báo Prisma relation trực tiếp trong schema
 
 ### Bảng Vegetable
 
@@ -247,6 +248,13 @@ Trường chính:
 - `humidity`
 - `recordedAt`
 
+### Precision quan trọng
+
+- `Vegetable.price`, `PriceHistory.price`, `Sale.unitPrice`: `Decimal(10,2)`
+- `Sale.totalPrice`: `Decimal(14,2)` để rộng hơn và tránh overflow khi tổng tiền lớn
+- `Vegetable.quantityIn`, `Vegetable.quantityOut`, `Sale.quantity`: `Decimal(10,2)`
+- `SensorData.temperature`, `SensorData.humidity`: `Decimal(5,2)`
+
 ## 7. Rule nghiệp vụ đã chốt
 
 ### Ownership và phân quyền
@@ -289,11 +297,11 @@ quantityOut <= quantityIn
 
 ### LED
 
-Thiết kế đang hiểu theo hướng:
-- DB lưu desired state
-- API update trạng thái đèn
-- publish MQTT
-- khi publish thành công thì cập nhật `ledSyncedAt`
+Đã chốt rule:
+- DB lưu desired state, tức trạng thái mà API muốn thiết bị thực hiện
+- flow: API nhận request -> update DB -> publish MQTT -> nếu publish thành công thì update `ledSyncedAt`
+- nếu `ledSyncedAt < updatedAt` thì hiểu là đang có lệnh chưa sync được xuống thiết bị
+- conflict giữa desired state và actual state của thiết bị không xử lý trong scope hiện tại
 
 ## 8. Partial unique index quan trọng
 
@@ -529,4 +537,3 @@ Flow test cuối nên cover:
 
 - `GET /sensors?gardenId=&period=day|week|month`
 - `POST /gardens/:id/led`
-
