@@ -58,15 +58,15 @@ Xây dựng hệ thống IoT quản lý khu vườn bằng `NestJS + PostgreSQL 
 
 Đã có:
 - `src/config/`
+- `src/common/`
 - `src/prisma/`
+- `src/modules/auth/`
+- `src/modules/users/`
 - `prisma/schema.prisma`
 - `prisma/migrations/`
 - `prisma.config.ts`
 
 Chưa làm:
-- `auth/`
-- `users/`
-- `common/`
 - `gardens/`
 - `vegetables/`
 - `sales/`
@@ -105,10 +105,14 @@ npm run prisma:studio
 ```text
 garden_SN/
 ├─ src/
+│  ├─ common/
 │  ├─ config/
 │  │  ├─ app.config.ts
 │  │  ├─ jwt.config.ts
 │  │  └─ mqtt.config.ts
+│  ├─ modules/
+│  │  ├─ auth/
+│  │  └─ users/
 │  ├─ prisma/
 │  │  ├─ prisma.module.ts
 │  │  └─ prisma.service.ts
@@ -385,7 +389,7 @@ Checklist:
 
 ### Phase 2 - Auth Module
 
-Trạng thái: `TODO`
+Trạng thái: `DONE`
 
 Mục tiêu:
 - `UsersModule + UsersService`
@@ -399,11 +403,14 @@ Mục tiêu:
   - `RolesGuard`
   - `@Roles()`
   - `@CurrentUser()`
+  - `@Public()`
 
 Logic chốt:
 - register: hash password rồi mới lưu user
 - login: validate email/password bằng bcrypt, trả về JWT access token
 - `JwtStrategy` decode token rồi attach user cho request
+- `JwtAuthGuard` và `RolesGuard` được apply global bằng `APP_GUARD` trong `AppModule`
+- các route public như `POST /auth/register`, `POST /auth/login`, `GET /` dùng `@Public()`
 
 ### Phase 3 - Garden & Vegetable Module
 
