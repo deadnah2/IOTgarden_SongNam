@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum LedState {
+  On
+  Off
+}
+
+enum PriceAction {
+  SET
+  UPDATE
+  DELETE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gardens   Garden[]
+}
+
+model Garden {
+  id          Int         @id @default(autoincrement())
+  name        String
+  userId      Int
+  led1State   LedState    @default(Off)
+  led2State   LedState    @default(Off)
+  led3State   LedState    @default(Off)
+  ledSyncedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
+
+  user        User         @relation(fields: [userId], references: [id])
+  vegetables  Vegetable[]
+  sensorData  SensorData[]
+
+  @@index([userId])
+}
+
+model Vegetable {
+  id           Int            @id @default(autoincrement())
+  name         String
+  quantityIn   Decimal        @default(0) @db.Decimal(10, 2)
+  quantityOut  Decimal        @default(0) @db.Decimal(10, 2)
+  price        Decimal?       @db.Decimal(10, 2)
+  gardenId     Int
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+
+  garden       Garden         @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  sales        Sale[]
+  priceHistory PriceHistory[]
+
+  @@unique([id, gardenId])
+  // Unique active vegetable name per garden is added via raw SQL partial index migration:
+  // CREATE UNIQUE INDEX "vegetable_garden_name_active_unique"
+  // ON "Vegetable" ("gardenId", "name")
+  // WHERE "deletedAt" IS NULL;
+}
+
+model PriceHistory {
+  id          Int          @id @default(autoincrement())
+  vegetableId Int
+  price       Decimal?     @db.Decimal(10, 2)
+  action      PriceAction
+  createdAt   DateTime     @default(now())
+
+  vegetable   Vegetable    @relation(fields: [vegetableId], references: [id], onDelete: Cascade)
+
+  @@index([vegetableId, createdAt])
+}
+
+model Sale {
+  id          Int        @id @default(autoincrement())
+  vegetableId Int
+  gardenId    Int
+  quantity    Decimal    @db.Decimal(10, 2)
+  unitPrice   Decimal    @db.Decimal(10, 2)
+  totalPrice  Decimal    @db.Decimal(14, 2)
+  soldAt      DateTime   @default(now())
+
+  vegetable   Vegetable  @relation(fields: [vegetableId, gardenId], references: [id, gardenId])
+
+  @@index([gardenId, soldAt])
+  @@index([vegetableId, soldAt])
+}
+
+model SensorData {
+  id          Int       @id @default(autoincrement())
+  gardenId    Int
+  temperature Decimal   @db.Decimal(5, 2)
+  humidity    Decimal   @db.Decimal(5, 2)
+  recordedAt  DateTime  @default(now())
+
+  garden      Garden    @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+
+  @@index([gardenId, recordedAt])
+}
