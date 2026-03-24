@@ -40,7 +40,9 @@ export class GardenOwnershipGuard implements CanActivate {
       throw new UnauthorizedException('Chưa xác thực người dùng');
     }
 
-    const rawValue = request[config.source]?.[config.key];
+    const requestSource =
+      config.source === 'param' ? request.params : request[config.source];
+    const rawValue = requestSource?.[config.key];
     const id = Number(rawValue);
 
     if (rawValue === undefined || rawValue === null || rawValue === '') {
