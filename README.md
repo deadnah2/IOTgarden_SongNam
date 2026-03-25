@@ -1,51 +1,53 @@
 # Garden_SN
 
-## 1. Muc tieu du an
+## 1. Tổng quan dự án
 
-Xay dung he thong IoT quan ly khu vuon bang `NestJS + PostgreSQL + Prisma`, gom:
-- quan ly nhieu garden theo user
-- quan ly vegetable, ton kho, gia hien tai va lich su gia
-- tao giao dich ban hang va tinh doanh thu
-- nhan du lieu sensor qua MQTT
-- day realtime qua WebSocket
-- dieu khien LED qua MQTT
-- xac thuc JWT va phan quyen `ADMIN` / `USER`
+`Garden_SN` là backend cho hệ thống IoT quản lý khu vườn, xây dựng bằng `NestJS + PostgreSQL + Prisma`.
 
-Business rule da chot:
-- `1 User co nhieu Garden`
+Hệ thống giải quyết các bài toán chính:
+- Quản lý nhiều khu vườn theo từng người dùng
+- Quản lý rau, tồn kho, giá hiện tại và lịch sử giá
+- Tạo giao dịch bán hàng và tính doanh thu
+- Nhận dữ liệu cảm biến từ thiết bị IoT qua MQTT
+- Đẩy dữ liệu thời gian thực qua WebSocket
+- Điều khiển LED cho từng khu vườn
+- Xác thực JWT và phân quyền `ADMIN` / `USER`
 
-## 2. Stack ky thuat
+Điểm chốt nghiệp vụ:
+- `1 User có nhiều Garden`
+
+## 2. Công nghệ sử dụng
 
 - Backend: `NestJS`
 - Database: `PostgreSQL`
 - ORM: `Prisma 7`
-- Auth: `JWT`, `Passport`
+- Authentication: `JWT`, `Passport`
 - Validation: `class-validator`, `class-transformer`
-- Password hash: `bcrypt`
+- Hash password: `bcrypt`
 - API docs: `Swagger`
 - IoT: `MQTT`
-- Realtime: `WebSocket` / `socket.io`
+- Realtime: `WebSocket / socket.io`
 
-## 3. Trang thai hien tai
+## 3. Trạng thái hiện tại
 
-Da hoan thanh:
+Đã hoàn thành:
 - `Phase 1 - Project setup & Database`
 - `Phase 2 - Auth Module`
 - `Phase 3 - Garden & Vegetable Module`
 - `Phase 4 - Sales & Reports Module`
 
-Chua lam:
+Chưa làm:
 - `Phase 5 - MQTT + Sensors + WebSocket`
-- `Phase 6 - Hoan thien & kiem thu cuoi`
+- `Phase 6 - Hoàn thiện & kiểm thử cuối`
 
-Da verify thuc te:
+Đã verify:
 - `npm run prisma:validate`
 - `npm run prisma:generate`
 - `npm run prisma:migrate:dev`
 - `npm run build`
-- test tay bang API that cho `auth`, `gardens`, `vegetables`, `price`, `sales`, `reports`
+- Đã test tay các flow chính của `auth`, `gardens`, `vegetables`, `price`, `sales`, `reports`
 
-## 4. Cach chay du an
+## 4. Cách chạy dự án
 
 ```bash
 npm install
@@ -70,26 +72,24 @@ npm run prisma:migrate:dev
 npm run prisma:studio
 ```
 
-## 5. Cau truc source hien tai
+## 5. Cấu trúc source
 
 ```text
 garden_SN/
 |-- src/
 |   |-- common/
 |   |-- config/
-|   |   |-- app.config.ts
-|   |   |-- jwt.config.ts
-|   |   `-- mqtt.config.ts
 |   |-- modules/
 |   |   |-- auth/
-|   |   |-- gardens/
-|   |   |-- reports/
-|   |   |-- sales/
 |   |   |-- users/
-|   |   `-- vegetables/
+|   |   |-- gardens/
+|   |   |-- vegetables/
+|   |   |-- sales/
+|   |   |-- reports/
+|   |   |-- mqtt/
+|   |   |-- sensors/
+|   |   `-- websocket/
 |   |-- prisma/
-|   |   |-- prisma.module.ts
-|   |   `-- prisma.service.ts
 |   |-- app.module.ts
 |   `-- main.ts
 |-- prisma/
@@ -101,212 +101,76 @@ garden_SN/
 `-- .env.example
 ```
 
-## 6. Database da chot
+Ý nghĩa chính:
+- `config/`: cấu hình app, jwt, mqtt
+- `common/`: guard, decorator, filter, pipe dùng chung
+- `prisma/`: `PrismaModule` và `PrismaService`
+- `modules/`: toàn bộ module nghiệp vụ
 
-Schema nguon hien tai nam o:
+## 6. Thiết kế dữ liệu
+
+Schema hiện tại nằm ở:
 - `prisma/schema.prisma`
 
-### Enum
+### 6.1. Các bảng chính
 
-- `Role`: `ADMIN`, `USER`
-- `LedState`: `On`, `Off`
-- `PriceAction`: `SET`, `UPDATE`, `DELETE`
+`User`
+- Lưu thông tin người dùng
+- Một user có nhiều garden
 
-### User
+`Garden`
+- Thuộc về một user
+- Có 3 trạng thái LED
+- Dùng `soft delete`
 
-Y nghia:
-- luu tai khoan nguoi dung
-- mot user co nhieu garden
+`Vegetable`
+- Thuộc về một garden
+- Lưu số lượng nhập, số lượng đã bán, giá hiện tại
+- Dùng `soft delete`
 
-Field chinh:
-- `id`
-- `email` unique
-- `name`
-- `password`
-- `role`
-- `createdAt`
-- `updatedAt`
+`PriceHistory`
+- Lưu lịch sử thay đổi giá
+- Phục vụ API xem danh sách giá theo thời gian
 
-### Garden
+`Sale`
+- Lưu lịch sử giao dịch bán
+- `unitPrice` là giá snapshot tại thời điểm bán
+- `totalPrice` được tính ở server-side
 
-Y nghia:
-- garden thuoc ve mot user
-- luu desired state cua 3 LED
-- dung soft delete
+`SensorData`
+- Lưu dữ liệu nhiệt độ, độ ẩm theo thời gian
 
-Field chinh:
-- `id`
-- `name`
-- `userId`
-- `led1State`
-- `led2State`
-- `led3State`
-- `ledSyncedAt`
-- `createdAt`
-- `updatedAt`
-- `deletedAt`
+### 6.2. Quan hệ dữ liệu
 
-Quan he:
-- `Garden -> User`
-- `Garden -> Vegetable[]`
-- `Garden -> SensorData[]`
-- `Sale.gardenId` tham chieu Garden o muc nghiep vu de query/report, nhung khong khai bao Prisma relation truc tiep
+- `User 1 - N Garden`
+- `Garden 1 - N Vegetable`
+- `Garden 1 - N SensorData`
+- `Vegetable 1 - N PriceHistory`
+- `Vegetable 1 - N Sale`
 
-### Vegetable
+Lưu ý với `Sale`:
+- `Sale.gardenId` được giữ để query/report nhanh
+- Tính toàn vẹn dữ liệu được đảm bảo bằng relation:
+  - `Sale(vegetableId, gardenId) -> Vegetable(id, gardenId)`
 
-Y nghia:
-- rau thuoc ve mot garden
-- co ton kho nhap, ton kho da ban
-- gia hien tai luu o `price`
-- lich su gia luu rieng o `PriceHistory`
-- dung soft delete
-
-Field chinh:
-- `id`
-- `name`
-- `quantityIn`
-- `quantityOut`
-- `price`
-- `gardenId`
-- `createdAt`
-- `updatedAt`
-- `deletedAt`
-
-Quan he:
-- `Vegetable -> Garden`
-- `Vegetable -> Sale[]`
-- `Vegetable -> PriceHistory[]`
-
-### PriceHistory
-
-Y nghia:
-- luu lich su thao tac gia
-- phuc vu `GET /price`
-
-Field chinh:
-- `id`
-- `vegetableId`
-- `price`
-- `action`
-- `createdAt`
-
-Ghi chu:
-- `price` co the `null` khi `action = DELETE`
-
-### Sale
-
-Y nghia:
-- luu lich su giao dich ban
-- `unitPrice` la snapshot gia tai thoi diem ban
-- `totalPrice` tinh o server-side
-
-Field chinh:
-- `id`
-- `vegetableId`
-- `gardenId`
-- `quantity`
-- `unitPrice`
-- `totalPrice`
-- `soldAt`
-
-Thiet ke quan trong:
-- `gardenId` trong `Sale` la scalar de query nhanh
-- toan ven du lieu duoc dam bao bang composite relation:
-  `Sale(vegetableId, gardenId) -> Vegetable(id, gardenId)`
-
-### SensorData
-
-Y nghia:
-- luu du lieu nhiet do, do am theo thoi gian
-
-Field chinh:
-- `id`
-- `gardenId`
-- `temperature`
-- `humidity`
-- `recordedAt`
-
-### Precision quan trong
+### 6.3. Precision quan trọng
 
 - `Vegetable.price`, `PriceHistory.price`, `Sale.unitPrice`: `Decimal(10,2)`
 - `Sale.totalPrice`: `Decimal(14,2)`
 - `Vegetable.quantityIn`, `Vegetable.quantityOut`, `Sale.quantity`: `Decimal(10,2)`
 - `SensorData.temperature`, `SensorData.humidity`: `Decimal(5,2)`
 
-## 7. Rule nghiep vu da chot
+### 6.4. Partial unique index
 
-### Ownership va phan quyen
-
-- `ADMIN` thay va quan ly toan bo garden
-- `USER` chi thay va quan ly garden cua minh
-- moi thao tac tren `Vegetable`, `Sale`, `SensorData`, `PriceHistory report` deu phai di qua check ownership cua `Garden`
-
-### Soft delete
-
-`Garden` va `Vegetable` dung `deletedAt`
-
-Rule bat buoc:
-- moi query active mac dinh loc `deletedAt: null`
-- khong thao tac tren `Garden` da soft delete
-- khong thao tac tren `Vegetable` da soft delete
-- khi soft delete `Garden`, service se soft delete luon toan bo `Vegetable` active ben duoi trong cung transaction
-
-### Ton kho
-
-- `quantityOut` khong duoc sua truc tiep bang endpoint `vegetables`
-- `quantityOut` chi duoc update trong `SalesService`
-- luon dam bao:
-
-```text
-quantityOut <= quantityIn
-```
-
-### Gia va lich su gia
-
-- gia hien tai luu trong `Vegetable.price`
-- moi thao tac `set/update/delete` gia phai ghi them `PriceHistory`
-- `GET /vegetables/:id/price` la doc gia hien tai
-- `GET /price` la doc danh sach lich su gia tu `PriceHistory`, khong phai aggregate
-
-### Sale
-
-- `POST /sales` khong nhan `unitPrice`, `totalPrice` tu client
-- `totalPrice = quantity * unitPrice`
-- `unitPrice` la snapshot gia tai thoi diem ban
-- tao sale va tang `quantityOut` trong cung transaction
-- neu transaction fail thi DB khong doi dang nua chung
-
-### Report
-
-- `GET /price` lay du lieu tu `PriceHistory`
-- `GET /all/price` lay du lieu tu `Sale`
-- `GET /price` hien tai chi xem duoc ky hien tai:
-  - `period=day` -> ngay hien tai
-  - `period=week` -> tuan hien tai
-  - `period=month` -> thang hien tai
-- chua ho tro truyen ngay moc nhu `date=2026-03-10`
-
-### LED
-
-Rule da chot:
-- DB luu desired state, tuc la trang thai ma API muon thiet bi thuc hien
-- flow: API nhan request -> update DB -> publish MQTT -> neu publish thanh cong thi update `ledSyncedAt`
-- neu `ledSyncedAt < updatedAt` thi hieu la dang co lenh chua sync xuong thiet bi
-- conflict giua desired state va actual state cua thiet bi chua xu ly trong scope hien tai
-
-## 8. Partial unique index
-
-Do `Vegetable` dung soft delete nen khong dung:
+Do `Vegetable` dùng soft delete nên không dùng:
 
 ```prisma
 @@unique([gardenId, name])
 ```
 
-Ly do:
-- can cho phep tao lai rau cung ten trong cung garden sau khi record cu da bi soft delete
-
-Giai phap da dung:
-- raw SQL migration tao partial unique index chi cho record active
+Thay vào đó dùng partial unique index để:
+- Không cho trùng tên rau trong cùng garden khi record còn active
+- Vẫn cho phép tạo lại rau cùng tên sau khi record cũ đã bị soft delete
 
 SQL:
 
@@ -316,123 +180,145 @@ ON "Vegetable" ("gardenId", "name")
 WHERE "deletedAt" IS NULL;
 ```
 
-File lien quan:
-- `prisma/manual-partial-index.sql`
-- `prisma/migrations/20260324091200_add_vegetable_active_unique_index/migration.sql`
+## 7. Các rule nghiệp vụ cốt lõi
 
-## 9. Cau truc module
+### 7.1. Quyền truy cập
+
+- `ADMIN` được xem và quản lý toàn bộ garden
+- `USER` chỉ được xem và quản lý garden của mình
+- Các thao tác trên `Vegetable`, `Sale`, `SensorData`, `Reports` đều đi qua ownership của `Garden`
+
+### 7.2. Soft delete
+
+`Garden` và `Vegetable` dùng `deletedAt`
+
+Quy ước hiện tại:
+- Mọi query active đều phải lọc `deletedAt: null`
+- Không thao tác trên `Garden` đã soft delete
+- Không thao tác trên `Vegetable` đã soft delete
+- Khi soft delete `Garden`, service sẽ soft delete luôn toàn bộ `Vegetable` active bên dưới trong cùng transaction
+
+### 7.3. Tồn kho
+
+- `quantityOut` không được sửa trực tiếp qua endpoint `vegetables`
+- `quantityOut` chỉ được cập nhật trong `SalesService`
+- Luôn đảm bảo:
 
 ```text
-src/
-|-- config/
-|-- common/
-|-- prisma/
-`-- modules/
-    |-- auth/
-    |-- users/
-    |-- gardens/
-    |-- vegetables/
-    |-- sales/
-    |-- reports/
-    |-- mqtt/
-    |-- sensors/
-    `-- websocket/
+quantityOut <= quantityIn
 ```
 
-Giai thich:
-- `config/`: config app, jwt, mqtt
-- `common/`: decorator, guard, filter, pipe dung chung
-- `prisma/`: PrismaModule va PrismaService global
-- `modules/`: toan bo module nghiep vu
+### 7.4. Giá và lịch sử giá
 
-## 10. Roadmap theo phase
+- Giá hiện tại lưu ở `Vegetable.price`
+- Mọi thao tác `set / update / delete` giá đều phải ghi thêm `PriceHistory`
+- `GET /vegetables/:id/price` là lấy giá hiện tại
+- `GET /price` là lấy danh sách lịch sử giá từ `PriceHistory`
+
+### 7.5. Sale
+
+- `POST /sales` không nhận `unitPrice`, `totalPrice` từ client
+- `unitPrice` lấy từ `Vegetable.price` tại thời điểm bán
+- `totalPrice = quantity * unitPrice`
+- Tạo `Sale` và tăng `quantityOut` trong cùng transaction
+- Nếu transaction fail thì DB không được đổi nửa chừng
+
+### 7.6. Reports
+
+`GET /price`
+- Nguồn dữ liệu: `PriceHistory`
+- Trả về danh sách record, không aggregate
+- Hỗ trợ `period=day|week|month`
+- Hiện tại chỉ xem được kỳ hiện tại theo thời điểm gọi API
+
+`GET /all/price`
+- Nguồn dữ liệu: `Sale`
+- Dùng để tổng hợp doanh thu theo thời gian
+
+### 7.7. LED
+
+- DB lưu `desired state`
+- Flow: API nhận request -> update DB -> publish MQTT -> nếu publish thành công thì update `ledSyncedAt`
+- Nếu `ledSyncedAt < updatedAt` thì hiểu là còn lệnh chưa sync xuống thiết bị
+- Chưa xử lý conflict giữa `desired state` và `actual state` trong phạm vi hiện tại
+
+## 8. Các phase triển khai
 
 ### Phase 1 - Project setup & Database
 
-Trang thai: `DONE`
+Trạng thái: `DONE`
 
-Checklist:
-- [x] Khoi tao NestJS project
-- [x] Cai dependency nen
-- [x] Setup ConfigModule + `.env`
-- [x] Setup Prisma + PostgreSQL
-- [x] Viet schema Prisma final
-- [x] Chay migration init
-- [x] Them partial unique index bang raw SQL migration
-- [x] Setup PrismaModule + PrismaService
-- [x] Setup Swagger trong `main.ts`
-- [x] Setup global ValidationPipe
+Đã làm:
+- Khởi tạo project NestJS
+- Cài dependency nền
+- Setup `ConfigModule`, `.env`, `.env.example`
+- Setup Prisma 7 + PostgreSQL
+- Viết schema final
+- Chạy migration
+- Setup partial unique index bằng raw SQL
+- Setup `PrismaModule`, `PrismaService`
+- Setup Swagger
+- Setup global `ValidationPipe`
 
 ### Phase 2 - Auth Module
 
-Trang thai: `DONE`
+Trạng thái: `DONE`
 
-Da co:
-- `UsersModule + UsersService`
-  - `findByEmail`
-  - `findById`
-- `AuthModule`
-  - `POST /auth/register`
-  - `POST /auth/login`
-- common auth components:
-  - `JwtAuthGuard`
-  - `RolesGuard`
-  - `@Roles()`
-  - `@CurrentUser()`
-  - `@Public()`
+Đã có:
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /users/me`
+- `JwtAuthGuard`
+- `RolesGuard`
+- `@Roles()`
+- `@CurrentUser()`
+- `@Public()`
 
-Logic chot:
-- register: hash password roi moi luu user
-- login: validate email/password bang bcrypt, tra ve JWT access token
-- `JwtStrategy` decode token roi attach user cho request
-- `JwtAuthGuard` va `RolesGuard` duoc apply global bang `APP_GUARD`
+Logic chính:
+- Register: hash password rồi mới lưu user
+- Login: validate email/password bằng bcrypt, trả JWT access token
+- `JwtStrategy` decode token rồi attach user vào request
+- `JwtAuthGuard` và `RolesGuard` được apply global qua `APP_GUARD`
 
-Open issue da biet, chua fix:
-- login voi email co khoang trang dau/cuoi hien tai co the fail do `LocalAuthGuard` / `passport-local` doc raw body truoc khi DTO transform co hieu luc
+Lưu ý:
+- Hiện còn một open issue: login với email có khoảng trắng đầu/cuối có thể fail do `LocalAuthGuard` đọc raw body trước DTO transform
 
 ### Phase 3 - Garden & Vegetable Module
 
-Trang thai: `DONE`
+Trạng thái: `DONE`
 
-Da co:
-- `GardensModule`
-  - `POST /gardens`
-  - `GET /gardens`
-  - `GET /gardens/:id`
-  - `PUT /gardens/:id`
-  - `DELETE /gardens/:id`
-- `GardenOwnershipGuard` trong `common/guards`
-- `VegetablesModule`
-  - `POST /vegetables`
-  - `GET /vegetables?gardenId=`
-  - `PUT /vegetables/:id`
-  - `DELETE /vegetables/:id`
-- `PriceService` trong `VegetablesModule`
-  - `POST /vegetables/:id/price`
-  - `PUT /vegetables/:id/price`
-  - `DELETE /vegetables/:id/price`
-  - `GET /vegetables/:id/price`
+Đã có:
+- `POST /gardens`
+- `GET /gardens`
+- `GET /gardens/:id`
+- `PUT /gardens/:id`
+- `DELETE /gardens/:id`
+- `POST /vegetables`
+- `GET /vegetables?gardenId=...`
+- `PUT /vegetables/:id`
+- `DELETE /vegetables/:id`
+- `POST /vegetables/:id/price`
+- `PUT /vegetables/:id/price`
+- `DELETE /vegetables/:id/price`
+- `GET /vegetables/:id/price`
 
-Logic chot:
-- garden delete la soft delete
-- vegetable delete la soft delete
-- user chi thay garden cua minh, admin thay tat ca
-- `GET /vegetables` bat buoc co `gardenId`
-- moi thao tac gia phai ghi `PriceHistory`
-- khi xoa mem garden, service xoa mem luon vegetable con active
+Logic chính:
+- Garden delete là soft delete
+- Vegetable delete là soft delete
+- `GET /vegetables` bắt buộc có `gardenId`
+- Mọi thao tác giá đều ghi `PriceHistory`
+- Khi xóa mềm garden, service xóa mềm luôn vegetable con active
 
 ### Phase 4 - Sales & Reports Module
 
-Trang thai: `DONE`
+Trạng thái: `DONE`
 
-Da co:
-- `SalesModule`
-  - `POST /sales`
-- `ReportsModule`
-  - `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
-  - `GET /all/price?gardenId=&period=day|week|month`
+Đã có:
+- `POST /sales`
+- `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
+- `GET /all/price?gardenId=&period=day|week|month`
 
-#### 4.1 SalesModule
+#### SalesModule
 
 Request body:
 
@@ -444,64 +330,39 @@ Request body:
 }
 ```
 
-Rule nghiep vu:
-- route dung `GardenOwnershipGuard` theo `body.gardenId`
-- service check `Garden` con active
-- service check `Vegetable` con active
-- service check `Vegetable` thuoc dung `gardenId`
-- service check `Vegetable.price != null`
-- service check ton kho:
-  - `available = quantityIn - quantityOut`
-  - `quantity <= available`
-- tao `Sale` va tang `Vegetable.quantityOut` trong cung transaction
-- `unitPrice` lay tu `Vegetable.price` tai thoi diem ban
-- `totalPrice` tinh o server-side
-- response da serialize Decimal thanh number
+Flow xử lý:
+- Check ownership bằng `GardenOwnershipGuard` theo `body.gardenId`
+- Check `Garden` còn active
+- Check `Vegetable` còn active
+- Check `Vegetable` thuộc đúng `gardenId`
+- Check `Vegetable.price != null`
+- Check tồn kho
+- Tạo `Sale`
+- Tăng `Vegetable.quantityOut`
+- Trả response đã serialize Decimal sang number
 
-Nhung gi client khong duoc tu truyen:
-- `unitPrice`
-- `totalPrice`
-- `quantityOut`
+Lưu ý:
+- Project đang dùng `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })`
+- Vì vậy nếu client gửi thừa `unitPrice`, `totalPrice`, `quantityOut` thì sẽ bị `400`
 
-Do project dang dung:
-- `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })`
+#### ReportsModule
 
-nen cac field thua se bi `400`, khong bi ignore.
+`GET /price`
+- Dùng để xem danh sách `PriceHistory`
+- Có `gardenId` bắt buộc
+- Có `vegetableId` optional
+- Trả về từng record gồm:
+  - `id`
+  - `vegetableId`
+  - `vegetableName`
+  - `action`
+  - `price`
+  - `createdAt`
 
-#### 4.2 ReportsModule - GET /price
-
-Y nghia:
-- lay danh sach `PriceHistory` theo `gardenId`
-- `vegetableId` la optional filter
-- khong aggregate `min/max/avg`
-
-Response hien tai moi record gom:
-- `id`
-- `vegetableId`
-- `vegetableName`
-- `action`
-- `price`
-- `createdAt`
-
-Rule:
-- route dung `GardenOwnershipGuard` theo `query.gardenId`
-- neu co `vegetableId` thi phai thuoc dung `gardenId`
-- chi cho query vegetable con active
-- chi lay record cua vegetable con active
-- `period=day|week|month` hien tai duoc tinh theo thoi diem hien tai cua server
-
-Vi du:
-- `period=day` -> danh sach record trong ngay hien tai
-- `period=week` -> danh sach record trong tuan hien tai
-- `period=month` -> danh sach record trong thang hien tai
-
-#### 4.3 ReportsModule - GET /all/price
-
-Y nghia:
-- report doanh thu theo thoi gian
-- du lieu lay tu `Sale`
-
-Response hien tai:
+`GET /all/price`
+- Dùng để xem doanh thu từ `Sale`
+- Aggregate theo `date_trunc(day|week|month, soldAt)`
+- Trả:
 
 ```json
 {
@@ -517,66 +378,50 @@ Response hien tai:
 }
 ```
 
-Rule:
-- route dung `GardenOwnershipGuard` theo `query.gardenId`
-- aggregate theo `date_trunc(day|week|month, soldAt)` bang PostgreSQL
-- du lieu raw tu `$queryRaw` duoc serialize lai truoc khi tra API
-  - `bigint -> number`
-  - `decimal text -> number`
+#### Phase 4 đã test
 
-#### 4.4 Phase 4 da test thuc te
-
-Da test tay va verify DB cho cac case:
-- sale khi chua co gia -> `400`
-- sale `quantity = 0` -> `400`
-- sale `quantity < 0` -> `400`
-- sale body co field thua -> `400`
-- sale vuot ton kho -> `400`
-- sale fail giua chung -> DB khong doi
-- sale `gardenId` khong khop `vegetableId` -> `400`
-- user ban vao garden nguoi khac -> `403`
-- admin ban o garden cua user khac -> pass
-- vegetable soft delete -> `404`
-- garden soft delete -> `404`
-- `GET /price` thieu `gardenId` -> `400`
-- `GET /price` garden nguoi khac -> `403`
-- `GET /price` garden rong -> `[]`
-- `GET /price` voi `vegetableId` sai garden -> `400`
-- `GET /price` voi `vegetableId` da soft delete -> bi chan
-- `GET /all/price` thieu `gardenId` -> `400`
-- `GET /all/price` garden nguoi khac -> `403`
-- `GET /all/price` garden rong -> `{ total: 0, data: [] }`
+Đã test các case quan trọng:
+- Sale khi chưa có giá -> `400`
+- Sale với `quantity = 0` hoặc âm -> `400`
+- Sale body có field thừa -> `400`
+- Sale vượt tồn kho -> `400`
+- Sale fail thì DB không đổi
+- Sale `gardenId` không khớp `vegetableId` -> `400`
+- User bán vào garden người khác -> `403`
+- Admin bán ở garden của user khác -> pass
+- Vegetable soft delete -> `404`
+- Garden soft delete -> `404`
+- `GET /price` thiếu `gardenId` -> `400`
+- `GET /price` garden người khác -> `403`
+- `GET /price` garden rỗng -> `[]`
+- `GET /price` với `vegetableId` sai garden -> `400`
+- `GET /price` với `vegetableId` đã soft delete -> bị chặn
+- `GET /all/price` thiếu `gardenId` -> `400`
+- `GET /all/price` garden người khác -> `403`
+- `GET /all/price` garden rỗng -> `{ total: 0, data: [] }`
 
 ### Phase 5 - MQTT + Sensors + WebSocket
 
-Trang thai: `TODO`
+Trạng thái: `TODO`
 
-Muc tieu:
-- `MqttModule`
-  - ket noi HiveMQ
-  - subscribe sensor topic
-  - publish LED control
-- `SensorsModule`
-  - luu `SensorData`
-  - `GET /sensors?gardenId=&period=`
-- LED control qua MQTT
-  - `POST /gardens/:id/led`
-- `WebSocket Gateway`
-  - xac thuc JWT luc handshake
-  - client join room theo `gardenId`
-  - push realtime sensor data dung room
+Mục tiêu:
+- Kết nối MQTT broker
+- Nhận dữ liệu cảm biến
+- Lưu `SensorData`
+- Push realtime qua WebSocket
+- Điều khiển LED qua MQTT
 
-### Phase 6 - Hoan thien & kiem thu
+### Phase 6 - Hoàn thiện & kiểm thử
 
-Trang thai: `TODO`
+Trạng thái: `TODO`
 
-Muc tieu:
-- them Swagger annotation day du
-- xu ly Decimal serialization dong bo
-- chuan hoa exception/filter
-- test toan bo flow bang Swagger/Postman/MQTTX
+Mục tiêu:
+- Bổ sung Swagger annotation đầy đủ
+- Chuẩn hóa exception/filter
+- Rà lại Decimal serialization
+- Test full flow bằng Swagger/Postman/MQTTX
 
-## 11. Endpoint hien tai
+## 9. API hiện có
 
 ### Auth
 
@@ -595,7 +440,7 @@ Muc tieu:
 ### Vegetables
 
 - `POST /vegetables`
-- `GET /vegetables?gardenId=`
+- `GET /vegetables?gardenId=...`
 - `PUT /vegetables/:id`
 - `DELETE /vegetables/:id`
 - `POST /vegetables/:id/price`
@@ -603,51 +448,8 @@ Muc tieu:
 - `DELETE /vegetables/:id/price`
 - `GET /vegetables/:id/price`
 
-### Sales / Reports
+### Sales & Reports
 
 - `POST /sales`
 - `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
 - `GET /all/price?gardenId=&period=day|week|month`
-
-## 12. File quan trong can doc truoc neu ban giao tiep
-
-Core:
-- `src/app.module.ts`
-- `src/main.ts`
-- `src/prisma/prisma.service.ts`
-- `prisma/schema.prisma`
-
-Auth:
-- `src/modules/auth/auth.service.ts`
-- `src/modules/auth/strategies/local.strategy.ts`
-- `src/modules/auth/strategies/jwt.strategy.ts`
-- `src/common/guards/jwt-auth.guard.ts`
-- `src/common/guards/roles.guard.ts`
-
-Ownership:
-- `src/common/guards/garden-ownership.guard.ts`
-- `src/common/decorators/ownership.decorator.ts`
-
-Garden / Vegetable / Price:
-- `src/modules/gardens/gardens.service.ts`
-- `src/modules/vegetables/vegetables.service.ts`
-- `src/modules/vegetables/price.service.ts`
-
-Sales / Reports:
-- `src/modules/sales/sales.service.ts`
-- `src/modules/sales/utils/sale.serializer.ts`
-- `src/modules/reports/reports.service.ts`
-- `src/modules/reports/utils/report.serializer.ts`
-
-## 13. Luu y cho nguoi lam tiep
-
-- project hien tai da co nen auth, ownership, garden, vegetable, price, sales, reports
-- open issue dang de sau:
-  - trim email trong flow `POST /auth/login`
-  - `GET /price` hien tai chi support ky hien tai, chua support xem mot ngay/tuan/thang tuy chon
-- truoc khi lam `Phase 5`, can giu nguyen cac nguon chan ly:
-  - gia hien tai: `Vegetable.price`
-  - lich su gia: `PriceHistory`
-  - giao dich ban: `Sale`
-  - doanh thu report: tinh tu `Sale`
-  - so luong da ban: `Vegetable.quantityOut`
