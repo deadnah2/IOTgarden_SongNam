@@ -93,7 +93,84 @@ garden_SN/
 Schema hiện tại nằm ở:
 - `prisma/schema.prisma`
 
-### 5.1. Các bảng chính
+### 5.1. ERD tổng quan
+
+```mermaid
+erDiagram
+    User ||--o{ Garden : owns
+    Garden ||--o{ Vegetable : contains
+    Garden ||--o{ SensorData : records
+    Vegetable ||--o{ PriceHistory : has
+    Vegetable ||--o{ Sale : sold_in
+
+    User {
+        int id PK
+        string email UK
+        string name
+        string password
+        enum role
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Garden {
+        int id PK
+        string name
+        int userId FK
+        enum led1State
+        enum led2State
+        enum led3State
+        datetime ledSyncedAt
+        datetime createdAt
+        datetime updatedAt
+        datetime deletedAt
+    }
+
+    Vegetable {
+        int id PK
+        string name
+        decimal quantityIn
+        decimal quantityOut
+        decimal price
+        int gardenId FK
+        datetime createdAt
+        datetime updatedAt
+        datetime deletedAt
+    }
+
+    PriceHistory {
+        int id PK
+        int vegetableId FK
+        decimal price
+        enum action
+        datetime createdAt
+    }
+
+    Sale {
+        int id PK
+        int vegetableId FK
+        int gardenId
+        decimal quantity
+        decimal unitPrice
+        decimal totalPrice
+        datetime soldAt
+    }
+
+    SensorData {
+        int id PK
+        int gardenId FK
+        decimal temperature
+        decimal humidity
+        datetime recordedAt
+    }
+```
+
+Ghi chú:
+- `Sale.gardenId` được giữ để query và report nhanh
+- Tính toàn vẹn của `Sale` được đảm bảo qua relation tới `Vegetable(id, gardenId)`
+- `Garden` và `Vegetable` dùng `soft delete` qua `deletedAt`
+
+### 5.2. Các bảng chính
 
 `User`
 - Lưu thông tin người dùng
@@ -121,7 +198,7 @@ Schema hiện tại nằm ở:
 `SensorData`
 - Lưu dữ liệu nhiệt độ, độ ẩm theo thời gian
 
-### 5.2. Quan hệ dữ liệu
+### 5.3. Quan hệ dữ liệu
 
 - `User 1 - N Garden`
 - `Garden 1 - N Vegetable`
@@ -134,14 +211,14 @@ Lưu ý với `Sale`:
 - Tính toàn vẹn dữ liệu được đảm bảo bằng relation:
   - `Sale(vegetableId, gardenId) -> Vegetable(id, gardenId)`
 
-### 5.3. Precision quan trọng
+### 5.4. Precision quan trọng
 
 - `Vegetable.price`, `PriceHistory.price`, `Sale.unitPrice`: `Decimal(10,2)`
 - `Sale.totalPrice`: `Decimal(14,2)`
 - `Vegetable.quantityIn`, `Vegetable.quantityOut`, `Sale.quantity`: `Decimal(10,2)`
 - `SensorData.temperature`, `SensorData.humidity`: `Decimal(5,2)`
 
-### 5.4. Partial unique index
+### 5.5. Partial unique index
 
 `Vegetable` dùng soft delete nên không dùng:
 
