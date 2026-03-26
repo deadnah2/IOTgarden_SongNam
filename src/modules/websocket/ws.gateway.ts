@@ -3,6 +3,7 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -43,7 +44,10 @@ type SensorRealtimePayload = {
   },
 })
 export class WsGateway
-  implements OnGatewayConnection<Socket>, OnGatewayDisconnect<Socket>
+  implements
+    OnGatewayInit<Server>,
+    OnGatewayConnection<Socket>,
+    OnGatewayDisconnect<Socket>
 {
   private readonly logger = new Logger(WsGateway.name);
 
@@ -56,24 +60,37 @@ export class WsGateway
     private readonly gardenAccessService: GardenAccessService,
   ) {}
 
-  async handleConnection(client: Socket) {
-    try {
-      const token = this.extractToken(client);
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
-      const user = await this.usersService.findById(payload.sub);
+  afterInit(server: Server) {
+    server.use(async (client, next) => {
+      try {
+        const token = this.extractToken(client);
+        const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
+        const user = await this.usersService.findById(payload.sub);
 
-      if (!user) {
-        throw new Error('User not found');
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        client.data.user = user;
+        next();
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unauthorized websocket client';
+        const connectError = new Error(message) as Error & {
+          data?: { message: string };
+        };
+
+        connectError.data = { message };
+        next(connectError);
       }
+    });
+  }
 
-      client.data.user = user;
-      this.logger.log(`WebSocket connected: user=${user.id}, socket=${client.id}`);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unauthorized websocket client';
-      client.emit('auth.error', { message });
-      client.disconnect(true);
-    }
+  handleConnection(client: Socket) {
+    const user = client.data.user as SocketUser | undefined;
+    this.logger.log(
+      `WebSocket connected: user=${user?.id ?? 'unknown'}, socket=${client.id}`,
+    );
   }
 
   handleDisconnect(client: Socket) {
