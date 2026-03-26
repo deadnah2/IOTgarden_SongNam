@@ -15,12 +15,14 @@ import {
   type OwnershipConfig,
 } from '../decorators/ownership.decorator';
 import type { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
+import { GardenAccessService } from '../services/garden-access.service';
 
 @Injectable()
 export class GardenOwnershipGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly prisma: PrismaService,
+    private readonly gardenAccessService: GardenAccessService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -56,36 +58,12 @@ export class GardenOwnershipGuard implements CanActivate {
     }
 
     if (config.resource === 'garden') {
-      await this.assertGardenAccess(id, user);
+      await this.gardenAccessService.assertGardenAccess(id, user);
       return true;
     }
 
     await this.assertVegetableAccess(id, user);
     return true;
-  }
-
-  private async assertGardenAccess(
-    gardenId: number,
-    user: AuthenticatedUser,
-  ): Promise<void> {
-    const garden = await this.prisma.garden.findFirst({
-      where: {
-        id: gardenId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        userId: true,
-      },
-    });
-
-    if (!garden) {
-      throw new NotFoundException('Garden không tồn tại hoặc đã bị xóa');
-    }
-
-    if (user.role !== Role.ADMIN && garden.userId !== user.id) {
-      throw new ForbiddenException('Bạn không có quyền truy cập garden này');
-    }
   }
 
   private async assertVegetableAccess(
