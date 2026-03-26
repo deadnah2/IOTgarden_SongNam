@@ -33,19 +33,19 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   ): TUser {
     if (err || !user) {
       if (info?.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('JWT token đã hết hạn');
+        throw new UnauthorizedException('JWT token has expired');
       }
 
       if (info?.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('JWT token không hợp lệ');
+        throw new UnauthorizedException('JWT token is invalid');
       }
 
       if (info?.message === 'No auth token') {
-        throw new UnauthorizedException('Thiếu bearer token');
+        throw new UnauthorizedException('Missing bearer token');
       }
 
       throw new UnauthorizedException(
-        info?.message ?? err?.message ?? 'Token không hợp lệ hoặc đã hết hạn',
+        info?.message ?? err?.message ?? 'Token is invalid or has expired',
       );
     }
 

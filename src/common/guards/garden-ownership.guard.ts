@@ -39,7 +39,7 @@ export class GardenOwnershipGuard implements CanActivate {
     const user = request.user as AuthenticatedUser | undefined;
 
     if (!user) {
-      throw new UnauthorizedException('Chưa xác thực người dùng');
+      throw new UnauthorizedException('User is not authenticated');
     }
 
     const requestSource =
@@ -49,12 +49,12 @@ export class GardenOwnershipGuard implements CanActivate {
 
     if (rawValue === undefined || rawValue === null || rawValue === '') {
       throw new BadRequestException(
-        `Thiếu ${config.key} để kiểm tra quyền truy cập`,
+        `Missing ${config.key} for ownership check`,
       );
     }
 
     if (Number.isNaN(id) || id <= 0) {
-      throw new BadRequestException(`${config.key} phải là số nguyên dương`);
+      throw new BadRequestException(`${config.key} must be a positive integer`);
     }
 
     if (config.resource === 'garden') {
@@ -88,11 +88,11 @@ export class GardenOwnershipGuard implements CanActivate {
     });
 
     if (!vegetable || vegetable.garden.deletedAt) {
-      throw new NotFoundException('Vegetable không tồn tại hoặc đã bị xóa');
+      throw new NotFoundException('Vegetable not found or deleted');
     }
 
     if (user.role !== Role.ADMIN && vegetable.garden.userId !== user.id) {
-      throw new ForbiddenException('Bạn không có quyền truy cập vegetable này');
+      throw new ForbiddenException('You do not have access to this vegetable');
     }
   }
 }

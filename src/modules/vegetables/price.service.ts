@@ -20,7 +20,9 @@ export class PriceService {
     const vegetable = await this.vegetablesService.findOne(vegetableId);
 
     if (vegetable.price !== null) {
-      throw new ConflictException('Vegetable đã có giá, hãy dùng endpoint update');
+      throw new ConflictException(
+        'Vegetable already has a price, use the update endpoint instead',
+      );
     }
 
     const updatedVegetable = await this.prisma.$transaction(async (tx) => {
@@ -47,7 +49,7 @@ export class PriceService {
     const vegetable = await this.vegetablesService.findOne(vegetableId);
 
     if (vegetable.price === null) {
-      throw new BadRequestException('Vegetable chưa có giá để cập nhật');
+      throw new BadRequestException('Vegetable does not have a price to update');
     }
 
     const updatedVegetable = await this.prisma.$transaction(async (tx) => {
@@ -74,7 +76,7 @@ export class PriceService {
     const vegetable = await this.vegetablesService.findOne(vegetableId);
 
     if (vegetable.price === null) {
-      throw new BadRequestException('Vegetable chưa có giá để xóa');
+      throw new BadRequestException('Vegetable does not have a price to delete');
     }
 
     const updatedVegetable = await this.prisma.$transaction(async (tx) => {
@@ -108,4 +110,3 @@ export class PriceService {
     };
   }
 }
-

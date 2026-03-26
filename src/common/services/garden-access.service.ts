@@ -27,11 +27,11 @@ export class GardenAccessService {
     });
 
     if (!garden) {
-      throw new NotFoundException('Garden không tồn tại hoặc đã bị xóa');
+      throw new NotFoundException('Garden not found or deleted');
     }
 
     if (user.role !== Role.ADMIN && garden.userId !== user.id) {
-      throw new ForbiddenException('Bạn không có quyền truy cập garden này');
+      throw new ForbiddenException('You do not have access to this garden');
     }
 
     return garden;

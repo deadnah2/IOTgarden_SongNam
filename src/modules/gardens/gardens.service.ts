@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { pickDefinedFields } from '../../common/utils/pick-defined-fields.util';
 import { MqttService } from '../mqtt/mqtt.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGardenDto } from './dto/create-garden.dto';
@@ -62,9 +63,7 @@ export class GardensService {
     //   throw new BadRequestException('Cần ít nhất một trường để cập nhật garden');
     // }
 
-    const data = Object.fromEntries(
-      Object.entries(dto).filter(([_, v]) => v !== undefined)
-    );
+    const data = pickDefinedFields(dto);
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('Need at least one field to update garden');
@@ -105,9 +104,7 @@ export class GardensService {
   ) {
     await this.findOne(id);
 
-    const data = Object.fromEntries(
-      Object.entries(dto).filter(([_, value]) => value !== undefined),
-    );
+    const data = pickDefinedFields(dto);
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestException(
