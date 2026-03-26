@@ -2,16 +2,22 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { MqttService } from '../mqtt/mqtt.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGardenDto } from './dto/create-garden.dto';
 import { UpdateGardenDto } from './dto/update-garden.dto';
+import { UpdateLedDto } from './dto/update-led.dto';
 
 @Injectable()
 export class GardensService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mqttService: MqttService,
+  ) {}
 
   async create(dto: CreateGardenDto, user: AuthenticatedUser) {
     return this.prisma.garden.create({
@@ -43,7 +49,7 @@ export class GardensService {
     });
 
     if (!garden) {
-      throw new NotFoundException('Garden không tồn tại hoặc đã bị xóa');
+      throw new NotFoundException('Garden does not exist or has been deleted');
     }
 
     return garden;
@@ -61,7 +67,7 @@ export class GardensService {
     );
 
     if (Object.keys(data).length === 0) {
-      throw new BadRequestException('Cần ít nhất một trường để cập nhật');
+      throw new BadRequestException('Need at least one field to update garden');
     }
 
     return this.prisma.garden.update({ where: { id }, data });
@@ -89,6 +95,50 @@ export class GardensService {
           deletedAt,
         },
       });
+    });
+  }
+
+  async updateLedStates(
+    id: number,
+    dto: UpdateLedDto,
+    user: AuthenticatedUser,
+  ) {
+    await this.findOne(id);
+
+    const data = Object.fromEntries(
+      Object.entries(dto).filter(([_, value]) => value !== undefined),
+    );
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException(
+        'At least one LED state must be provided',
+      );
+    }
+
+    const updatedGarden = await this.prisma.garden.update({
+      where: { id },
+      data,
+    });
+
+    try {
+      await this.mqttService.publishLedCommand({
+        gardenId: updatedGarden.id,
+        userId: user.id,
+        led1State: updatedGarden.led1State,
+        led2State: updatedGarden.led2State,
+        led3State: updatedGarden.led3State,
+      });
+    } catch {
+      throw new ServiceUnavailableException(
+        'Failed to publish LED command to MQTT broker',
+      );
+    }
+
+    return this.prisma.garden.update({
+      where: { id },
+      data: {
+        ledSyncedAt: new Date(),
+      },
     });
   }
 }

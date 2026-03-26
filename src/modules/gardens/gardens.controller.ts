@@ -20,6 +20,7 @@ import { GardenOwnershipGuard } from '../../common/guards/garden-ownership.guard
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { CreateGardenDto } from './dto/create-garden.dto';
 import { UpdateGardenDto } from './dto/update-garden.dto';
+import { UpdateLedDto } from './dto/update-led.dto';
 import { GardensService } from './gardens.service';
 
 @ApiTags('Gardens')
@@ -76,10 +77,25 @@ export class GardensController {
     source: 'param',
     key: 'id',
   })
+  @Post(':id/led')
+  @ApiOperation({ summary: 'Update desired LED state and publish MQTT command' })
+  updateLedStates(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateLedDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.gardensService.updateLedStates(id, dto, user);
+  }
+
+  @UseGuards(GardenOwnershipGuard)
+  @CheckOwnership({
+    resource: 'garden',
+    source: 'param',
+    key: 'id',
+  })
   @Delete(':id')
   @ApiOperation({ summary: 'Soft delete a garden' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.gardensService.softDelete(id);
   }
 }
-
