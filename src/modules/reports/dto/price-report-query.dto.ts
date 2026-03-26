@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Min } from 'class-validator';
-import { ReportPeriod } from './report-period.enum';
+import { Period } from '../../../common/enums/period.enum';
 
 export class PriceReportQueryDto {
   @ApiProperty({ example: 1 })
@@ -10,9 +10,9 @@ export class PriceReportQueryDto {
   @Min(1)
   gardenId: number;
 
-  @ApiProperty({ enum: ReportPeriod, enumName: 'ReportPeriod', example: ReportPeriod.DAY })
-  @IsEnum(ReportPeriod)
-  period: ReportPeriod;
+  @ApiProperty({ enum: Period, enumName: 'Period', example: Period.DAY })
+  @IsEnum(Period)
+  period: Period;
 
   @ApiPropertyOptional({ example: 1 })
   @Type(() => Number)
