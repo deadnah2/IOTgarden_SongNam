@@ -4,7 +4,7 @@
 
 `Garden_SN` là backend cho hệ thống IoT quản lý khu vườn, xây dựng bằng `NestJS + PostgreSQL + Prisma`.
 
-Bài toán chính của dự án:
+Dự án hiện đã hoàn thành các nhóm chức năng chính:
 - Quản lý nhiều khu vườn theo từng người dùng
 - Quản lý rau, tồn kho, giá hiện tại và lịch sử giá
 - Tạo giao dịch bán hàng và tính doanh thu
@@ -12,6 +12,9 @@ Bài toán chính của dự án:
 - Đẩy dữ liệu thời gian thực qua WebSocket
 - Điều khiển LED cho từng khu vườn
 - Xác thực JWT và phân quyền `ADMIN` / `USER`
+
+Chi tiết tiến độ triển khai, phạm vi từng phase và cách test tay theo từng phase xem tại:
+- `ROADMAP.md`
 
 ## 2. Công nghệ sử dụng
 
@@ -22,7 +25,7 @@ Bài toán chính của dự án:
 - Validation: `class-validator`, `class-transformer`
 - API docs: `Swagger`
 - IoT: `MQTT`
-- Realtime: `WebSocket / socket.io`
+- Realtime: `WebSocket / Socket.IO`
 
 ## 3. Cách chạy dự án
 
@@ -52,6 +55,23 @@ npm run prisma:generate
 npm run prisma:migrate:dev
 npm run prisma:studio
 ```
+
+### 3.5. Bảng biến môi trường (`.env`)
+
+| Biến | Mô tả |
+|---|---|
+| `PORT` | Port chạy ứng dụng NestJS |
+| `DATABASE_URL` | Chuỗi kết nối PostgreSQL cho Prisma |
+| `JWT_SECRET` | Secret dùng để ký và verify JWT |
+| `JWT_EXPIRES_IN` | Thời gian hết hạn JWT, ví dụ `1d`, `7d` |
+| `MQTT_BROKER_URL` | URL broker MQTT / HiveMQ |
+| `MQTT_USERNAME` | Username đăng nhập broker MQTT |
+| `MQTT_PASSWORD` | Password đăng nhập broker MQTT |
+| `MQTT_CLIENT_ID` | Client ID dùng khi app kết nối broker |
+
+Ghi chú:
+- File mẫu nằm ở `.env.example`
+- `JWT_SECRET` và các biến MQTT là các biến quan trọng nhất cần cấu hình đúng trước khi test
 
 ## 4. Cấu trúc source
 
@@ -168,7 +188,7 @@ erDiagram
 Ghi chú:
 - `Sale.gardenId` được giữ để query và report nhanh
 - Tính toàn vẹn của `Sale` được đảm bảo qua relation tới `Vegetable(id, gardenId)`
-- `Garden` và `Vegetable` dùng `soft delete` qua `deletedAt`
+- `Garden` và `Vegetable` dùng `soft delete`
 
 ### 5.2. Các bảng chính
 
@@ -246,7 +266,15 @@ WHERE "deletedAt" IS NULL;
 - `USER` chỉ được xem và quản lý garden của mình
 - Các thao tác trên `Vegetable`, `Sale`, `SensorData`, `Reports`, `LED`, `WebSocket room` đều đi qua ownership của `Garden`
 
-### 6.2. Soft delete
+### 6.2. Nguồn chân lý dữ liệu
+
+- Giá hiện tại: `Vegetable.price`
+- Lịch sử giá: `PriceHistory`
+- Số lượng đã bán: `Vegetable.quantityOut`
+- Doanh thu: `Sale`
+- Quyền truy cập dữ liệu: `Garden.userId`
+
+### 6.3. Soft delete
 
 `Garden` và `Vegetable` dùng `deletedAt`
 
@@ -256,7 +284,7 @@ Quy ước hiện tại:
 - Không thao tác trên `Vegetable` đã soft delete
 - Khi soft delete `Garden`, service sẽ soft delete luôn toàn bộ `Vegetable` active bên dưới trong cùng transaction
 
-### 6.3. Tồn kho
+### 6.4. Tồn kho
 
 - `quantityOut` không được sửa trực tiếp qua endpoint `vegetables`
 - `quantityOut` chỉ được cập nhật trong `SalesService`
@@ -266,14 +294,14 @@ Quy ước hiện tại:
 quantityOut <= quantityIn
 ```
 
-### 6.4. Giá và lịch sử giá
+### 6.5. Giá và lịch sử giá
 
 - Giá hiện tại lưu ở `Vegetable.price`
 - Mọi thao tác `set / update / delete` giá đều phải ghi thêm `PriceHistory`
 - `GET /vegetables/:id/price` là lấy giá hiện tại
 - `GET /price` là lấy danh sách lịch sử giá từ `PriceHistory`
 
-### 6.5. Sale
+### 6.6. Sale
 
 - `POST /sales` không nhận `unitPrice`, `totalPrice` từ client
 - `unitPrice` lấy từ `Vegetable.price` tại thời điểm bán
@@ -281,7 +309,7 @@ quantityOut <= quantityIn
 - Tạo `Sale` và tăng `quantityOut` trong cùng transaction
 - Nếu transaction fail thì DB không được đổi nửa chừng
 
-### 6.6. Reports
+### 6.7. Reports
 
 `GET /price`
 - Nguồn dữ liệu: `PriceHistory`
@@ -293,7 +321,7 @@ quantityOut <= quantityIn
 - Nguồn dữ liệu: `Sale`
 - Dùng để tổng hợp doanh thu theo thời gian
 
-### 6.7. MQTT, Sensor, WebSocket
+### 6.8. MQTT, Sensor, WebSocket
 
 Luồng sensor:
 - Thiết bị publish vào topic MQTT
@@ -306,242 +334,54 @@ Luồng WebSocket:
 - Sau khi connect thành công, client gửi `garden.join`
 - Server check quyền truy cập garden rồi mới cho join room
 
-Event socket hiện tại:
-- `garden.joined`
-- `garden.join.error`
-- `sensor.updated`
-
-### 6.8. LED
+### 6.9. LED
 
 - DB lưu `desired state`
 - Flow: API nhận request -> update DB -> publish MQTT -> nếu publish thành công thì update `ledSyncedAt`
 - Nếu `ledSyncedAt < updatedAt` thì hiểu là còn lệnh chưa sync xuống thiết bị
-- Chưa xử lý conflict giữa `desired state` và `actual state` trong phạm vi hiện tại
 
-## 7. Trạng thái theo phase
+### 6.10. MQTT Topics & WebSocket Events
 
-### Phase 1 - Project setup & Database
+#### MQTT Topics
 
-Trạng thái: `DONE`
+| Loại | Topic | Mô tả |
+|---|---|---|
+| Subscribe | `garden/+/sensor` | App lắng nghe dữ liệu cảm biến từ thiết bị |
+| Publish | `garden/{gardenId}/led/control` | App gửi lệnh điều khiển LED tới thiết bị |
 
-Đã làm:
-- Khởi tạo project NestJS
-- Cài dependency nền
-- Setup `ConfigModule`, `.env`, `.env.example`
-- Setup Prisma 7 + PostgreSQL
-- Viết schema final
-- Chạy migration
-- Setup partial unique index bằng raw SQL
-- Setup `PrismaModule`, `PrismaService`
-- Setup Swagger
-- Setup global `ValidationPipe`
+#### WebSocket Events
 
-### Phase 2 - Auth Module
+| Event | Hướng | Mô tả |
+|---|---|---|
+| `connect_error` | Server -> Client | Token lỗi ở handshake, socket bị từ chối ngay lúc kết nối |
+| `garden.join` | Client -> Server | Client yêu cầu join room theo `gardenId` |
+| `garden.joined` | Server -> Client | Join room thành công |
+| `garden.join.error` | Server -> Client | Join room thất bại do sai quyền hoặc garden không hợp lệ |
+| `sensor.updated` | Server -> Client | Có dữ liệu cảm biến mới cho room hiện tại |
 
-Trạng thái: `DONE`
+## 7. Trạng thái hiện tại
 
-Đã có:
-- `POST /auth/register`
-- `POST /auth/login`
-- `GET /users/me`
-- `JwtAuthGuard`
-- `RolesGuard`
-- `@Roles()`
-- `@CurrentUser()`
-- `@Public()`
+Dự án hiện đã hoàn thành đến hết `Phase 5`:
+- Setup project, database, Swagger
+- Auth + role-based authorization
+- CRUD Garden + Vegetable + Price
+- Sales + Reports
+- MQTT + Sensors + WebSocket
+- LED control qua MQTT
 
-Logic chính:
-- Register: hash password rồi mới lưu user
-- Login: validate email/password bằng bcrypt, trả JWT access token
-- `JwtStrategy` decode token rồi attach user vào request
-- `JwtAuthGuard` và `RolesGuard` được apply global qua `APP_GUARD`
-
-Open issue hiện tại:
-- Login với email có khoảng trắng đầu/cuối có thể fail do `LocalAuthGuard` đọc raw body trước DTO transform
-
-### Phase 3 - Garden & Vegetable Module
-
-Trạng thái: `DONE`
-
-Đã có:
-- `POST /gardens`
-- `GET /gardens`
-- `GET /gardens/:id`
-- `PUT /gardens/:id`
-- `DELETE /gardens/:id`
-- `POST /vegetables`
-- `GET /vegetables?gardenId=...`
-- `PUT /vegetables/:id`
-- `DELETE /vegetables/:id`
-- `POST /vegetables/:id/price`
-- `PUT /vegetables/:id/price`
-- `DELETE /vegetables/:id/price`
-- `GET /vegetables/:id/price`
-
-Logic chính:
-- Garden delete là soft delete
-- Vegetable delete là soft delete
-- `GET /vegetables` bắt buộc có `gardenId`
-- Mọi thao tác giá đều ghi `PriceHistory`
-- Khi xóa mềm garden, service xóa mềm luôn vegetable con active
-
-### Phase 4 - Sales & Reports Module
-
-Trạng thái: `DONE`
-
-Đã có:
-- `POST /sales`
-- `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
-- `GET /all/price?gardenId=&period=day|week|month`
-
-#### SalesModule
-
-Request body:
-
-```json
-{
-  "gardenId": 1,
-  "vegetableId": 10,
-  "quantity": 2.5
-}
-```
-
-Flow xử lý:
-- Check ownership theo `body.gardenId`
-- Check `Garden` còn active
-- Check `Vegetable` còn active
-- Check `Vegetable` thuộc đúng `gardenId`
-- Check `Vegetable.price != null`
-- Check tồn kho
-- Tạo `Sale`
-- Tăng `Vegetable.quantityOut`
-- Trả response đã serialize Decimal sang number
-
-Lưu ý:
-- Project đang dùng `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })`
-- Nếu client gửi thừa `unitPrice`, `totalPrice`, `quantityOut` thì sẽ bị `400`
-
-#### ReportsModule
-
-`GET /price`
-- Dùng để xem danh sách `PriceHistory`
-- Có `gardenId` bắt buộc
-- Có `vegetableId` optional
-- Trả về từng record gồm:
-  - `id`
-  - `vegetableId`
-  - `vegetableName`
-  - `action`
-  - `price`
-  - `createdAt`
-
-`GET /all/price`
-- Dùng để xem doanh thu từ `Sale`
-- Aggregate theo `date_trunc(day|week|month, soldAt)`
-- Trả:
-
-```json
-{
-  "total": 45,
-  "data": [
-    {
-      "periodStart": "2026-03-25T00:00:00.000Z",
-      "salesCount": 2,
-      "totalQuantity": 3.5,
-      "totalRevenue": 45
-    }
-  ]
-}
-```
-
-### Phase 5 - MQTT + Sensors + WebSocket
-
-Trạng thái: `DONE`
-
-Đã có:
-- `MqttModule`
-- `SensorsModule`
-- `WebSocket Gateway`
-- `POST /gardens/:id/led`
-- `GET /sensors?gardenId=&period=day|week|month`
-
-#### MQTT
-
-Vai trò:
-- Kết nối broker HiveMQ
-- Subscribe sensor topic
-- Parse payload JSON
-- Delegate xuống `SensorsService`
-- Publish lệnh LED
-
-Sensor topic hiện tại:
-
-```text
-garden/+/sensor
-```
-
-LED control topic hiện tại:
-
-```text
-garden/{gardenId}/led/control
-```
-
-#### Sensors
-
-`GET /sensors`
-- `gardenId` bắt buộc
-- `period=day|week|month`
-- Dữ liệu trả về lấy từ `SensorData`
-
-Luồng ingest:
-- MQTT nhận message
-- Parse payload
-- Check garden còn active
-- Lưu `SensorData`
-- Emit realtime qua socket room tương ứng
-
-#### WebSocket
-
-Handshake:
-- Verify JWT khi client connect
-- Nếu token lỗi thì bị từ chối ngay ở bước handshake
-- Client sẽ nhận lỗi kết nối theo cơ chế `connect_error` của Socket.IO, không đi vào phiên socket thành công
-
-Join room:
-- Client gửi event `garden.join`
-- Server check quyền garden
-- Nếu pass thì emit `garden.joined`
-- Nếu fail thì emit `garden.join.error`
-
-Lưu ý:
-- Đã đổi event lỗi từ `error` sang event custom để tránh Postman hiểu nhầm là lỗi runtime rồi tự disconnect
-
-#### LED control
-
-Endpoint:
-- `POST /gardens/:id/led`
-
-Body:
-- `led1State?`
-- `led2State?`
-- `led3State?`
-
-Rule:
-- 3 field đều optional
-- Nhưng request phải có ít nhất 1 field
-- Update desired state trong DB trước
-- Publish MQTT sau
-- Publish thành công mới update `ledSyncedAt`
+Ghi chú:
+- Phần roadmap / tiến trình phát triển chi tiết nên tách riêng khỏi README nếu cần theo dõi sâu hơn
+- README này ưu tiên mô tả dự án đang làm được gì và cách sử dụng
 
 ## 8. API hiện có
 
-### Auth
+### 8.1. Auth
 
 - `POST /auth/register`
 - `POST /auth/login`
 - `GET /users/me`
 
-### Gardens
+### 8.2. Gardens
 
 - `POST /gardens`
 - `GET /gardens`
@@ -550,7 +390,7 @@ Rule:
 - `DELETE /gardens/:id`
 - `POST /gardens/:id/led`
 
-### Vegetables
+### 8.3. Vegetables & Price
 
 - `POST /vegetables`
 - `GET /vegetables?gardenId=...`
@@ -561,12 +401,27 @@ Rule:
 - `DELETE /vegetables/:id/price`
 - `GET /vegetables/:id/price`
 
-### Sales & Reports
+### 8.4. Sales & Reports
 
 - `POST /sales`
 - `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
 - `GET /all/price?gardenId=&period=day|week|month`
 
-### Sensors
+### 8.5. Sensors
 
 - `GET /sensors?gardenId=&period=day|week|month`
+
+### 8.6. WebSocket
+
+Socket.IO workflow:
+- Kết nối socket với JWT
+- Gửi event `garden.join`
+- Nhận `garden.joined` hoặc `garden.join.error`
+- Khi có dữ liệu mới sẽ nhận `sensor.updated`
+
+## 9. Ghi chú kiểm thử
+
+- Swagger: `http://localhost:3000/api`
+- MQTT broker phải cấu hình đúng trong `.env`
+- WebSocket auth hiện dùng handshake middleware
+- Nếu token sai, client sẽ nhận lỗi theo cơ chế `connect_error` của Socket.IO
