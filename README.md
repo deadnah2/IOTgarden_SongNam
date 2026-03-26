@@ -1,20 +1,23 @@
 # Garden_SN
 
-## 1. Tổng quan dự án
+Backend NestJS cho hệ thống IoT quản lý khu vườn.
 
-`Garden_SN` là backend cho hệ thống IoT quản lý khu vườn, xây dựng bằng `NestJS + PostgreSQL + Prisma`.
+## 1. Tổng quan
 
-Hệ thống giải quyết các bài toán chính:
-- Quản lý nhiều khu vườn theo từng người dùng
-- Quản lý rau, tồn kho, giá hiện tại và lịch sử giá
-- Tạo giao dịch bán hàng và tính doanh thu
-- Nhận dữ liệu cảm biến từ thiết bị IoT qua MQTT
-- Đẩy dữ liệu thời gian thực qua WebSocket
-- Điều khiển LED cho từng khu vườn
-- Xác thực JWT và phân quyền `ADMIN` / `USER`
+Hệ thống phục vụ các nhu cầu chính:
 
-Điểm chốt nghiệp vụ:
-- `1 User có nhiều Garden`
+- 1 user có nhiều garden
+- quản lý garden và vegetable theo từng user
+- quản lý giá hiện tại và lịch sử giá
+- tạo giao dịch bán hàng và tính doanh thu
+- nhận dữ liệu cảm biến từ thiết bị qua MQTT
+- đẩy dữ liệu thời gian thực qua WebSocket
+- điều khiển LED cho từng garden
+- xác thực JWT và phân quyền `ADMIN` / `USER`
+
+Điểm chốt của dự án:
+
+- `1 User -> N Garden`
 
 ## 2. Công nghệ sử dụng
 
@@ -23,35 +26,27 @@ Hệ thống giải quyết các bài toán chính:
 - ORM: `Prisma 7`
 - Authentication: `JWT`, `Passport`
 - Validation: `class-validator`, `class-transformer`
-- Hash password: `bcrypt`
 - API docs: `Swagger`
 - IoT: `MQTT`
-- Realtime: `WebSocket / socket.io`
+- Realtime: `Socket.IO`
 
-## 3. Trạng thái hiện tại
+## 3. Cách chạy dự án
 
-Đã hoàn thành:
-- `Phase 1 - Project setup & Database`
-- `Phase 2 - Auth Module`
-- `Phase 3 - Garden & Vegetable Module`
-- `Phase 4 - Sales & Reports Module`
-
-Chưa làm:
-- `Phase 5 - MQTT + Sensors + WebSocket`
-- `Phase 6 - Hoàn thiện & kiểm thử cuối`
-
-Đã verify:
-- `npm run prisma:validate`
-- `npm run prisma:generate`
-- `npm run prisma:migrate:dev`
-- `npm run build`
-- Đã test tay các flow chính của `auth`, `gardens`, `vegetables`, `price`, `sales`, `reports`
-
-## 4. Cách chạy dự án
+### Cài dependency
 
 ```bash
 npm install
 ```
+
+### Prisma
+
+```bash
+npm run prisma:validate
+npm run prisma:generate
+npm run prisma:migrate:dev
+```
+
+### Chạy app
 
 ```bash
 npm run start:dev
@@ -63,84 +58,68 @@ Swagger:
 http://localhost:3000/api
 ```
 
-Prisma:
-
-```bash
-npm run prisma:validate
-npm run prisma:generate
-npm run prisma:migrate:dev
-npm run prisma:studio
-```
-
-## 5. Cấu trúc source
+## 4. Cấu trúc source
 
 ```text
-garden_SN/
-|-- src/
-|   |-- common/
-|   |-- config/
-|   |-- modules/
-|   |   |-- auth/
-|   |   |-- users/
-|   |   |-- gardens/
-|   |   |-- vegetables/
-|   |   |-- sales/
-|   |   |-- reports/
-|   |   |-- mqtt/
-|   |   |-- sensors/
-|   |   `-- websocket/
-|   |-- prisma/
-|   |-- app.module.ts
-|   `-- main.ts
-|-- prisma/
-|   |-- migrations/
-|   |-- manual-partial-index.sql
-|   `-- schema.prisma
-|-- prisma.config.ts
-|-- .env
-`-- .env.example
+src/
+├─ config/
+├─ common/
+├─ prisma/
+├─ modules/
+│  ├─ auth/
+│  ├─ users/
+│  ├─ gardens/
+│  ├─ vegetables/
+│  ├─ sales/
+│  ├─ reports/
+│  ├─ mqtt/
+│  ├─ sensors/
+│  └─ websocket/
+├─ app.module.ts
+└─ main.ts
 ```
 
-Ý nghĩa chính:
+Ý nghĩa:
+
 - `config/`: cấu hình app, jwt, mqtt
-- `common/`: guard, decorator, filter, pipe dùng chung
-- `prisma/`: `PrismaModule` và `PrismaService`
-- `modules/`: toàn bộ module nghiệp vụ
+- `common/`: decorator, guard, enum, service, util dùng chung
+- `prisma/`: `PrismaModule`, `PrismaService`
+- `modules/`: toàn bộ code nghiệp vụ
 
-## 6. Thiết kế dữ liệu
+## 5. Thiết kế dữ liệu
 
-Schema hiện tại nằm ở:
+Schema nằm ở:
+
 - `prisma/schema.prisma`
 
-### 6.1. Các bảng chính
+### 5.1. Bảng chính
 
 `User`
-- Lưu thông tin người dùng
-- Một user có nhiều garden
+- lưu thông tin người dùng
+- hỗ trợ role `ADMIN` / `USER`
 
 `Garden`
-- Thuộc về một user
-- Có 3 trạng thái LED
-- Dùng `soft delete`
+- thuộc về một user
+- có 3 trạng thái LED
+- dùng soft delete
 
 `Vegetable`
-- Thuộc về một garden
-- Lưu số lượng nhập, số lượng đã bán, giá hiện tại
-- Dùng `soft delete`
+- thuộc về một garden
+- lưu số lượng nhập, số lượng đã bán, giá hiện tại
+- dùng soft delete
 
 `PriceHistory`
-- Lưu lịch sử thay đổi giá
-- Phục vụ API xem danh sách giá theo thời gian
+- lưu lịch sử thay đổi giá
 
 `Sale`
-- Lưu lịch sử giao dịch bán
-- `unitPrice` là giá snapshot tại thời điểm bán
-- `totalPrice` được tính ở server-side
+- lưu lịch sử giao dịch bán
+- `unitPrice` là snapshot tại thời điểm bán
+- `totalPrice` được tính ở server
 
 `SensorData`
-- Lưu dữ liệu nhiệt độ, độ ẩm theo thời gian
+- lưu nhiệt độ, độ ẩm theo thời gian
 
-### 6.2. Quan hệ dữ liệu
+### 5.2. Quan hệ
 
 - `User 1 - N Garden`
 - `Garden 1 - N Vegetable`
@@ -148,29 +127,16 @@ Schema hiện tại nằm ở:
 - `Vegetable 1 - N PriceHistory`
 - `Vegetable 1 - N Sale`
 
-Lưu ý với `Sale`:
-- `Sale.gardenId` được giữ để query/report nhanh
-- Tính toàn vẹn dữ liệu được đảm bảo bằng relation:
-  - `Sale(vegetableId, gardenId) -> Vegetable(id, gardenId)`
-
-### 6.3. Precision quan trọng
+### 5.3. Precision quan trọng
 
 - `Vegetable.price`, `PriceHistory.price`, `Sale.unitPrice`: `Decimal(10,2)`
 - `Sale.totalPrice`: `Decimal(14,2)`
 - `Vegetable.quantityIn`, `Vegetable.quantityOut`, `Sale.quantity`: `Decimal(10,2)`
 - `SensorData.temperature`, `SensorData.humidity`: `Decimal(5,2)`
 
-### 6.4. Partial unique index
+### 5.4. Partial unique index
 
-Do `Vegetable` dùng soft delete nên không dùng:
-
-```prisma
-@@unique([gardenId, name])
-```
-
-Thay vào đó dùng partial unique index để:
-- Không cho trùng tên rau trong cùng garden khi record còn active
-- Vẫn cho phép tạo lại rau cùng tên sau khi record cũ đã bị soft delete
+Tên vegetable chỉ được unique trong cùng garden khi record còn active.
 
 SQL:
 
@@ -180,91 +146,69 @@ ON "Vegetable" ("gardenId", "name")
 WHERE "deletedAt" IS NULL;
 ```
 
-## 7. Các rule nghiệp vụ cốt lõi
+## 6. Rule nghiệp vụ đã chốt
 
-### 7.1. Quyền truy cập
+### 6.1. Quyền truy cập
 
-- `ADMIN` được xem và quản lý toàn bộ garden
-- `USER` chỉ được xem và quản lý garden của mình
-- Các thao tác trên `Vegetable`, `Sale`, `SensorData`, `Reports` đều đi qua ownership của `Garden`
+- `ADMIN` thấy và quản lý toàn bộ garden
+- `USER` chỉ thao tác trên garden của mình
+- quyền ở `vegetable`, `sale`, `sensor`, `report`, `websocket room` đều đi qua ownership của garden
 
-### 7.2. Soft delete
+### 6.2. Soft delete
 
-`Garden` và `Vegetable` dùng `deletedAt`
+- `Garden` và `Vegetable` dùng `deletedAt`
+- mọi query active đều phải lọc `deletedAt: null`
+- khi soft delete `Garden`, service soft delete luôn `Vegetable` active bên dưới
 
-Quy ước hiện tại:
-- Mọi query active đều phải lọc `deletedAt: null`
-- Không thao tác trên `Garden` đã soft delete
-- Không thao tác trên `Vegetable` đã soft delete
-- Khi soft delete `Garden`, service sẽ soft delete luôn toàn bộ `Vegetable` active bên dưới trong cùng transaction
+### 6.3. Tồn kho
 
-### 7.3. Tồn kho
+- `quantityOut` không sửa trực tiếp ở `vegetables`
+- `quantityOut` chỉ tăng trong `SalesService`
+- luôn giữ `quantityOut <= quantityIn`
 
-- `quantityOut` không được sửa trực tiếp qua endpoint `vegetables`
-- `quantityOut` chỉ được cập nhật trong `SalesService`
-- Luôn đảm bảo:
+### 6.4. Giá
 
-```text
-quantityOut <= quantityIn
-```
+- `Vegetable.price` là giá hiện tại
+- mọi thao tác set / update / delete giá đều ghi `PriceHistory`
+- `GET /vegetables/:id/price` lấy giá hiện tại
+- `GET /price` lấy danh sách lịch sử giá từ `PriceHistory`
 
-### 7.4. Giá và lịch sử giá
-
-- Giá hiện tại lưu ở `Vegetable.price`
-- Mọi thao tác `set / update / delete` giá đều phải ghi thêm `PriceHistory`
-- `GET /vegetables/:id/price` là lấy giá hiện tại
-- `GET /price` là lấy danh sách lịch sử giá từ `PriceHistory`
-
-### 7.5. Sale
+### 6.5. Sale
 
 - `POST /sales` không nhận `unitPrice`, `totalPrice` từ client
 - `unitPrice` lấy từ `Vegetable.price` tại thời điểm bán
 - `totalPrice = quantity * unitPrice`
-- Tạo `Sale` và tăng `quantityOut` trong cùng transaction
-- Nếu transaction fail thì DB không được đổi nửa chừng
+- tạo `Sale` và tăng `quantityOut` trong cùng transaction
 
-### 7.6. Reports
-
-`GET /price`
-- Nguồn dữ liệu: `PriceHistory`
-- Trả về danh sách record, không aggregate
-- Hỗ trợ `period=day|week|month`
-- Hiện tại chỉ xem được kỳ hiện tại theo thời điểm gọi API
-
-`GET /all/price`
-- Nguồn dữ liệu: `Sale`
-- Dùng để tổng hợp doanh thu theo thời gian
-
-### 7.7. LED
+### 6.6. LED
 
 - DB lưu `desired state`
-- Flow: API nhận request -> update DB -> publish MQTT -> nếu publish thành công thì update `ledSyncedAt`
-- Nếu `ledSyncedAt < updatedAt` thì hiểu là còn lệnh chưa sync xuống thiết bị
-- Chưa xử lý conflict giữa `desired state` và `actual state` trong phạm vi hiện tại
+- flow: API nhận request -> update DB -> publish MQTT -> nếu publish thành công thì update `ledSyncedAt`
+- nếu `ledSyncedAt < updatedAt` thì hiểu là còn lệnh chưa sync xuống thiết bị
 
-## 8. Các phase triển khai
+## 7. Trạng thái theo phase
 
-### Phase 1 - Project setup & Database
+### Phase 1 - Setup & Database
 
 Trạng thái: `DONE`
 
 Đã làm:
-- Khởi tạo project NestJS
-- Cài dependency nền
-- Setup `ConfigModule`, `.env`, `.env.example`
-- Setup Prisma 7 + PostgreSQL
-- Viết schema final
-- Chạy migration
-- Setup partial unique index bằng raw SQL
-- Setup `PrismaModule`, `PrismaService`
-- Setup Swagger
-- Setup global `ValidationPipe`
 
-### Phase 2 - Auth Module
+- setup project NestJS
+- setup `ConfigModule`, `.env`, `.env.example`
+- setup Prisma + PostgreSQL
+- migrate schema
+- setup partial unique index
+- setup `PrismaModule`, `PrismaService`
+- setup Swagger
+- setup global `ValidationPipe`
+
+### Phase 2 - Auth
 
 Trạng thái: `DONE`
 
 Đã có:
+
 - `POST /auth/register`
 - `POST /auth/login`
 - `GET /users/me`
@@ -274,154 +218,80 @@ Trạng thái: `DONE`
 - `@CurrentUser()`
 - `@Public()`
 
-Logic chính:
-- Register: hash password rồi mới lưu user
-- Login: validate email/password bằng bcrypt, trả JWT access token
-- `JwtStrategy` decode token rồi attach user vào request
-- `JwtAuthGuard` và `RolesGuard` được apply global qua `APP_GUARD`
-
-Lưu ý:
-- Hiện còn một open issue: login với email có khoảng trắng đầu/cuối có thể fail do `LocalAuthGuard` đọc raw body trước DTO transform
-
-### Phase 3 - Garden & Vegetable Module
+### Phase 3 - Gardens & Vegetables
 
 Trạng thái: `DONE`
 
 Đã có:
-- `POST /gardens`
-- `GET /gardens`
-- `GET /gardens/:id`
-- `PUT /gardens/:id`
-- `DELETE /gardens/:id`
-- `POST /vegetables`
-- `GET /vegetables?gardenId=...`
-- `PUT /vegetables/:id`
-- `DELETE /vegetables/:id`
-- `POST /vegetables/:id/price`
-- `PUT /vegetables/:id/price`
-- `DELETE /vegetables/:id/price`
-- `GET /vegetables/:id/price`
 
-Logic chính:
-- Garden delete là soft delete
-- Vegetable delete là soft delete
-- `GET /vegetables` bắt buộc có `gardenId`
-- Mọi thao tác giá đều ghi `PriceHistory`
-- Khi xóa mềm garden, service xóa mềm luôn vegetable con active
+- CRUD `gardens`
+- CRUD `vegetables`
+- CRUD giá trong `vegetables/:id/price`
+- soft delete `garden`
+- soft delete `vegetable`
+- ownership guard cho `garden` và `vegetable`
 
-### Phase 4 - Sales & Reports Module
+### Phase 4 - Sales & Reports
 
 Trạng thái: `DONE`
 
 Đã có:
+
 - `POST /sales`
 - `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
 - `GET /all/price?gardenId=&period=day|week|month`
 
-#### SalesModule
+Nguồn dữ liệu:
 
-Request body:
-
-```json
-{
-  "gardenId": 1,
-  "vegetableId": 10,
-  "quantity": 2.5
-}
-```
-
-Flow xử lý:
-- Check ownership bằng `GardenOwnershipGuard` theo `body.gardenId`
-- Check `Garden` còn active
-- Check `Vegetable` còn active
-- Check `Vegetable` thuộc đúng `gardenId`
-- Check `Vegetable.price != null`
-- Check tồn kho
-- Tạo `Sale`
-- Tăng `Vegetable.quantityOut`
-- Trả response đã serialize Decimal sang number
-
-Lưu ý:
-- Project đang dùng `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })`
-- Vì vậy nếu client gửi thừa `unitPrice`, `totalPrice`, `quantityOut` thì sẽ bị `400`
-
-#### ReportsModule
-
-`GET /price`
-- Dùng để xem danh sách `PriceHistory`
-- Có `gardenId` bắt buộc
-- Có `vegetableId` optional
-- Trả về từng record gồm:
-  - `id`
-  - `vegetableId`
-  - `vegetableName`
-  - `action`
-  - `price`
-  - `createdAt`
-
-`GET /all/price`
-- Dùng để xem doanh thu từ `Sale`
-- Aggregate theo `date_trunc(day|week|month, soldAt)`
-- Trả:
-
-```json
-{
-  "total": 45,
-  "data": [
-    {
-      "periodStart": "2026-03-25T00:00:00.000Z",
-      "salesCount": 2,
-      "totalQuantity": 3.5,
-      "totalRevenue": 45
-    }
-  ]
-}
-```
-
-#### Phase 4 đã test
-
-Đã test các case quan trọng:
-- Sale khi chưa có giá -> `400`
-- Sale với `quantity = 0` hoặc âm -> `400`
-- Sale body có field thừa -> `400`
-- Sale vượt tồn kho -> `400`
-- Sale fail thì DB không đổi
-- Sale `gardenId` không khớp `vegetableId` -> `400`
-- User bán vào garden người khác -> `403`
-- Admin bán ở garden của user khác -> pass
-- Vegetable soft delete -> `404`
-- Garden soft delete -> `404`
-- `GET /price` thiếu `gardenId` -> `400`
-- `GET /price` garden người khác -> `403`
-- `GET /price` garden rỗng -> `[]`
-- `GET /price` với `vegetableId` sai garden -> `400`
-- `GET /price` với `vegetableId` đã soft delete -> bị chặn
-- `GET /all/price` thiếu `gardenId` -> `400`
-- `GET /all/price` garden người khác -> `403`
-- `GET /all/price` garden rỗng -> `{ total: 0, data: [] }`
+- report giá lấy từ `PriceHistory`
+- report doanh thu lấy từ `Sale`
 
 ### Phase 5 - MQTT + Sensors + WebSocket
 
+Trạng thái: `DONE`
+
+Đã có:
+
+- `MqttModule`
+- `SensorsModule`
+- `WsModule`
+- `GET /sensors?gardenId=&period=day|week|month`
+- `POST /gardens/:id/led`
+
+MQTT:
+
+- subscribe topic `garden/+/sensor`
+- parse JSON và validate payload sensor
+- lưu DB qua `SensorsService`
+- publish LED command ra `garden/{gardenId}/led/control`
+
+Sensors:
+
+- lưu `SensorData` khi nhận dữ liệu từ MQTT
+- query dữ liệu theo `gardenId` và `period`
+- chỉ owner hoặc admin mới xem được
+
+WebSocket:
+
+- xác thực JWT lúc handshake
+- client join room bằng `garden.join`
+- join thành công trả `garden.joined`
+- join sai quyền trả `garden.join.error`
+- lỗi auth trả `auth.error`
+- sensor realtime emit bằng `sensor.updated` đúng room `garden:{id}`
+
+LED control:
+
+- API update desired state trong DB trước
+- publish MQTT sau
+- publish thành công mới cập nhật `ledSyncedAt`
+- nếu broker lỗi thì trả `503`, nhưng desired state vẫn giữ trong DB
+
+### Phase 6 - Hoàn thiện & kiểm thử cuối
+
 Trạng thái: `TODO`
 
-Mục tiêu:
-- Kết nối MQTT broker
-- Nhận dữ liệu cảm biến
-- Lưu `SensorData`
-- Push realtime qua WebSocket
-- Điều khiển LED qua MQTT
-
-### Phase 6 - Hoàn thiện & kiểm thử
-
-Trạng thái: `TODO`
-
-Mục tiêu:
-- Bổ sung Swagger annotation đầy đủ
-- Chuẩn hóa exception/filter
-- Rà lại Decimal serialization
-- Test full flow bằng Swagger/Postman/MQTTX
-
-## 9. API hiện có
+## 8. API hiện có
 
 ### Auth
 
@@ -435,6 +305,7 @@ Mục tiêu:
 - `GET /gardens`
 - `GET /gardens/:id`
 - `PUT /gardens/:id`
+- `POST /gardens/:id/led`
 - `DELETE /gardens/:id`
 
 ### Vegetables
@@ -453,3 +324,16 @@ Mục tiêu:
 - `POST /sales`
 - `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
 - `GET /all/price?gardenId=&period=day|week|month`
+
+### Sensors
+
+- `GET /sensors?gardenId=&period=day|week|month`
+
+## 9. Ghi chú
+
+- để test WebSocket bằng Postman, nên listen các event:
+  - `garden.joined`
+  - `garden.join.error`
+  - `sensor.updated`
+  - `auth.error`
+- với Socket.IO, không dùng event tên `error` cho lỗi nghiệp vụ vì dễ làm client test hiểu nhầm là lỗi kết nối
