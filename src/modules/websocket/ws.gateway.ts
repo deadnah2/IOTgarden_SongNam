@@ -16,19 +16,12 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Role } from '@prisma/client';
 import { Server, Socket } from 'socket.io';
+import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { GardenAccessService } from '../../common/services/garden-access.service';
 import { UsersService } from '../users/users.service';
 import { JoinGardenDto } from './dto/join-garden.dto';
-
-type SocketUser = {
-  id: number;
-  email: string;
-  name: string;
-  role: Role;
-};
 
 type SensorRealtimePayload = {
   id: number;
@@ -87,14 +80,14 @@ export class WsGateway
   }
 
   handleConnection(client: Socket) {
-    const user = client.data.user as SocketUser | undefined;
+    const user = client.data.user as AuthenticatedUser | undefined;
     this.logger.log(
       `WebSocket connected: user=${user?.id ?? 'unknown'}, socket=${client.id}`,
     );
   }
 
   handleDisconnect(client: Socket) {
-    const user = client.data.user as SocketUser | undefined;
+    const user = client.data.user as AuthenticatedUser | undefined;
     this.logger.log(
       `WebSocket disconnected: user=${user?.id ?? 'unknown'}, socket=${client.id}`,
     );
@@ -112,13 +105,7 @@ export class WsGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: JoinGardenDto,
   ) {
-    const user = client.data.user as SocketUser | undefined;
-
-    if (!user) {
-      client.emit('auth.error', { message: 'Unauthorized websocket client' });
-      client.disconnect(true);
-      return;
-    }
+    const user = client.data.user as AuthenticatedUser;
 
     try {
       await this.gardenAccessService.assertGardenAccess(dto.gardenId, user);

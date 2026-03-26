@@ -16,9 +16,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CheckOwnership } from '../../common/decorators/ownership.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { GardenOwnershipGuard } from '../../common/guards/garden-ownership.guard';
-import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { SetPriceDto } from './dto/set-price.dto';
 import { CreateVegetableDto } from './dto/create-vegetable.dto';
 import { UpdateVegetableDto } from './dto/update-vegetable.dto';
@@ -55,11 +53,8 @@ export class VegetablesController {
   })
   @Get()
   @ApiOperation({ summary: 'Get vegetables by garden' })
-  findAll(
-    @Query() query: VegetablesQueryDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.vegetablesService.findAll(query.gardenId, user);
+  findAll(@Query() query: VegetablesQueryDto) {
+    return this.vegetablesService.findAll(query.gardenId);
   }
 
   @UseGuards(GardenOwnershipGuard)
@@ -143,4 +138,3 @@ export class VegetablesController {
     return this.priceService.getPrice(id);
   }
 }
-

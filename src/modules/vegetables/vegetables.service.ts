@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
-import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { Prisma } from '@prisma/client';
+import { pickDefinedFields } from '../../common/utils/pick-defined-fields.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVegetableDto } from './dto/create-vegetable.dto';
 import { UpdateVegetableDto } from './dto/update-vegetable.dto';
@@ -31,14 +31,13 @@ export class VegetablesService {
     }
   }
 
-  async findAll(gardenId: number, user: AuthenticatedUser) {
+  async findAll(gardenId: number) {
     const vegetables = await this.prisma.vegetable.findMany({
       where: {
         deletedAt: null,
         gardenId,
         garden: {
           deletedAt: null,
-          ...(user.role === Role.ADMIN ? {} : { userId: user.id }),
         },
       },
       orderBy: {
@@ -61,7 +60,7 @@ export class VegetablesService {
     });
 
     if (!vegetable) {
-      throw new NotFoundException('Vegetable không tồn tại hoặc đã bị xóa');
+      throw new NotFoundException('Vegetable not found or deleted');
     }
 
     return vegetable;
@@ -75,30 +74,25 @@ export class VegetablesService {
     //     'Cần ít nhất một trường để cập nhật vegetable',
     //   );
     // }
-    const data = Object.fromEntries(
-      Object.entries(dto).filter(([_, v]) => v !== undefined)
-    );
+    const data = pickDefinedFields(dto);
 
     if (Object.keys(data).length === 0) {
-      throw new BadRequestException('Cần ít nhất một trường để cập nhật');
+      throw new BadRequestException('Need at least one field to update vegetable');
     }
-    
+
     if (
       dto.quantityIn !== undefined &&
       dto.quantityIn < existingVegetable.quantityOut.toNumber()
     ) {
       throw new BadRequestException(
-        'quantityIn không được nhỏ hơn quantityOut hiện tại',
+        'quantityIn cannot be less than the current quantityOut',
       );
     }
 
     try {
       const vegetable = await this.prisma.vegetable.update({
         where: { id },
-        data: {
-          ...(dto.name !== undefined ? { name: dto.name } : {}),
-          ...(dto.quantityIn !== undefined ? { quantityIn: dto.quantityIn } : {}),
-        },
+        data,
       });
 
       return serializeVegetable(vegetable);
@@ -125,7 +119,9 @@ export class VegetablesService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      throw new ConflictException('Tên vegetable đã tồn tại trong garden này');
+      throw new ConflictException(
+        'A vegetable with this name already exists in the garden',
+      );
     }
 
     throw error;
