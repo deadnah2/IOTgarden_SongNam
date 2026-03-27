@@ -128,26 +128,14 @@ erDiagram
 
     User {
         int id PK
-        string email UK
-        string name
-        string password
         enum role
-        datetime createdAt
-        datetime updatedAt
     }
 
     Garden {
         int id PK
-        string name
         int userId FK
-        enum led1State
-        enum led2State
-        enum led3State
         decimal temperatureThreshold
         decimal humidityThreshold
-        datetime ledSyncedAt
-        datetime createdAt
-        datetime updatedAt
         datetime deletedAt
     }
 
@@ -158,8 +146,6 @@ erDiagram
         decimal quantityOut
         decimal price
         int gardenId FK
-        datetime createdAt
-        datetime updatedAt
         datetime deletedAt
     }
 
@@ -175,8 +161,6 @@ erDiagram
         int id PK
         int vegetableId FK
         int gardenId
-        decimal quantity
-        decimal unitPrice
         decimal totalPrice
         datetime soldAt
     }
@@ -193,13 +177,14 @@ erDiagram
         int id PK
         int gardenId FK
         enum type
-        string message
-        decimal temperature
-        decimal humidity
         decimal thresholdValue
         datetime createdAt
     }
 ```
+
+Ghi chú:
+- ERD trên chỉ giữ các field chính để dễ đọc và tránh quá tải khi render trên GitHub
+- Cấu trúc đầy đủ của tất cả bảng xem tại `prisma/schema.prisma`
 
 Ghi chú:
 - `Sale.gardenId` được giữ để query và report nhanh
