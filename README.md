@@ -9,6 +9,7 @@ Dự án hiện đã hoàn thành các nhóm chức năng chính:
 - Quản lý rau, tồn kho, giá hiện tại và lịch sử giá
 - Tạo giao dịch bán hàng và tính doanh thu
 - Nhận dữ liệu cảm biến từ thiết bị IoT qua MQTT
+- Cảnh báo khi nhiệt độ / độ ẩm vượt ngưỡng cấu hình của từng garden
 - Đẩy dữ liệu thời gian thực qua WebSocket
 - Điều khiển LED cho từng khu vườn
 - Xác thực JWT và phân quyền `ADMIN` / `USER`
@@ -89,6 +90,7 @@ garden_SN/
 |   |   |-- reports/
 |   |   |-- mqtt/
 |   |   |-- sensors/
+|   |   |-- notifications/
 |   |   `-- websocket/
 |   |-- prisma/
 |   |-- app.module.ts
@@ -120,6 +122,7 @@ erDiagram
     User ||--o{ Garden : owns
     Garden ||--o{ Vegetable : contains
     Garden ||--o{ SensorData : records
+    Garden ||--o{ Notification : has
     Vegetable ||--o{ PriceHistory : has
     Vegetable ||--o{ Sale : sold_in
 
@@ -140,6 +143,8 @@ erDiagram
         enum led1State
         enum led2State
         enum led3State
+        decimal temperatureThreshold
+        decimal humidityThreshold
         datetime ledSyncedAt
         datetime createdAt
         datetime updatedAt
@@ -183,6 +188,17 @@ erDiagram
         decimal humidity
         datetime recordedAt
     }
+
+    Notification {
+        int id PK
+        int gardenId FK
+        enum type
+        string message
+        decimal temperature
+        decimal humidity
+        decimal thresholdValue
+        datetime createdAt
+    }
 ```
 
 Ghi chú:
@@ -199,6 +215,7 @@ Ghi chú:
 `Garden`
 - Thuộc về một user
 - Có 3 trạng thái LED
+- Có thể cấu hình ngưỡng cảnh báo nhiệt độ / độ ẩm riêng cho từng garden
 - Dùng `soft delete`
 
 `Vegetable`
@@ -218,11 +235,17 @@ Ghi chú:
 `SensorData`
 - Lưu dữ liệu nhiệt độ, độ ẩm theo thời gian
 
+`Notification`
+- Lưu lịch sử cảnh báo khi nhiệt độ hoặc độ ẩm vượt ngưỡng cấu hình của garden
+- Thuộc về một garden
+- Dùng cho API danh sách cảnh báo và realtime WebSocket
+
 ### 5.3. Quan hệ dữ liệu
 
 - `User 1 - N Garden`
 - `Garden 1 - N Vegetable`
 - `Garden 1 - N SensorData`
+- `Garden 1 - N Notification`
 - `Vegetable 1 - N PriceHistory`
 - `Vegetable 1 - N Sale`
 
@@ -272,6 +295,8 @@ WHERE "deletedAt" IS NULL;
 - Lịch sử giá: `PriceHistory`
 - Số lượng đã bán: `Vegetable.quantityOut`
 - Doanh thu: `Sale`
+- Ngưỡng cảnh báo: `Garden.temperatureThreshold`, `Garden.humidityThreshold`
+- Lịch sử cảnh báo: `Notification`
 - Quyền truy cập dữ liệu: `Garden.userId`
 
 ### 6.3. Soft delete
@@ -340,13 +365,28 @@ Luồng WebSocket:
 - Sau khi connect thành công, client gửi `garden.join`
 - Server check quyền truy cập garden rồi mới cho join room
 
-### 6.9. LED
+### 6.9. Notification thresholds
+
+- Mỗi `Garden` có thể cấu hình riêng:
+  - `temperatureThreshold`
+  - `humidityThreshold`
+- Chỉ xử lý cảnh báo theo hướng **vượt ngưỡng**
+- Sau khi lưu `SensorData`, hệ thống sẽ so sánh dữ liệu mới với threshold của đúng garden đó
+- Nếu vượt ngưỡng:
+  - tạo `Notification` trong DB
+  - emit realtime `notification.created` vào đúng room `garden:{id}`
+- Có cooldown `10 phút` cho từng cặp:
+  - `gardenId + HIGH_TEMPERATURE`
+  - `gardenId + HIGH_HUMIDITY`
+- Nếu cùng loại cảnh báo lặp lại trong thời gian cooldown thì không tạo thêm notification mới
+
+### 6.10. LED
 
 - DB lưu `desired state`
 - Flow: API nhận request -> update DB -> publish MQTT -> nếu publish thành công thì update `ledSyncedAt`
 - Nếu `ledSyncedAt < updatedAt` thì hiểu là còn lệnh chưa sync xuống thiết bị
 
-### 6.10. MQTT Topics & WebSocket Events
+### 6.11. MQTT Topics & WebSocket Events
 
 #### MQTT Topics
 
@@ -364,6 +404,7 @@ Luồng WebSocket:
 | `garden.joined` | Server -> Client | Join room thành công |
 | `garden.join.error` | Server -> Client | Join room thất bại do sai quyền hoặc garden không hợp lệ |
 | `sensor.updated` | Server -> Client | Có dữ liệu cảm biến mới cho room hiện tại |
+| `notification.created` | Server -> Client | Có cảnh báo mới cho garden hiện tại |
 
 ## 7. Trạng thái hiện tại
 
@@ -373,6 +414,7 @@ Dự án hiện đã hoàn thành đến hết `Phase 5`:
 - CRUD Garden + Vegetable + Price
 - Sales + Reports
 - MQTT + Sensors + WebSocket
+- Notification thresholds + notification list
 - LED control qua MQTT
 
 Ghi chú:
@@ -394,6 +436,8 @@ Ghi chú:
 - `GET /gardens/:id`
 - `PUT /gardens/:id`
 - `DELETE /gardens/:id`
+- `GET /gardens/:id/thresholds`
+- `PUT /gardens/:id/thresholds`
 - `POST /gardens/:id/led`
 
 ### 8.3. Vegetables & Price
@@ -417,13 +461,18 @@ Ghi chú:
 
 - `GET /sensors?gardenId=&period=day|week|month&date=optional`
 
-### 8.6. WebSocket
+### 8.6. Notifications
+
+- `GET /notifications?gardenId=...`
+
+### 8.7. WebSocket
 
 Socket.IO workflow:
 - Kết nối socket với JWT
 - Gửi event `garden.join`
 - Nhận `garden.joined` hoặc `garden.join.error`
 - Khi có dữ liệu mới sẽ nhận `sensor.updated`
+- Khi có cảnh báo mới sẽ nhận `notification.created`
 
 ## 9. Ghi chú kiểm thử
 

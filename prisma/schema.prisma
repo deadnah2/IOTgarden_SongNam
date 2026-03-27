@@ -22,6 +22,11 @@ enum PriceAction {
   DELETE
 }
 
+enum NotificationType {
+  HIGH_TEMPERATURE
+  HIGH_HUMIDITY
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
@@ -38,6 +43,8 @@ model Garden {
   id          Int         @id @default(autoincrement())
   name        String
   userId      Int
+  temperatureThreshold Decimal? @db.Decimal(5, 2)
+  humidityThreshold    Decimal? @db.Decimal(5, 2)
   led1State   LedState    @default(Off)
   led2State   LedState    @default(Off)
   led3State   LedState    @default(Off)
@@ -49,6 +56,7 @@ model Garden {
   user        User         @relation(fields: [userId], references: [id])
   vegetables  Vegetable[]
   sensorData  SensorData[]
+  notifications Notification[]
 
   @@index([userId])
 }
@@ -112,4 +120,20 @@ model SensorData {
   garden      Garden    @relation(fields: [gardenId], references: [id], onDelete: Cascade)
 
   @@index([gardenId, recordedAt])
+}
+
+model Notification {
+  id             Int              @id @default(autoincrement())
+  gardenId       Int
+  type           NotificationType
+  message        String
+  temperature    Decimal?         @db.Decimal(5, 2)
+  humidity       Decimal?         @db.Decimal(5, 2)
+  thresholdValue Decimal?         @db.Decimal(5, 2)
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+
+  garden         Garden           @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+
+  @@index([gardenId, createdAt])
+  @@index([gardenId, type, createdAt])
 }

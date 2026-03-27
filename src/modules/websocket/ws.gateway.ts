@@ -31,6 +31,17 @@ type SensorRealtimePayload = {
   recordedAt: Date;
 };
 
+type NotificationRealtimePayload = {
+  id: number;
+  gardenId: number;
+  type: 'HIGH_TEMPERATURE' | 'HIGH_HUMIDITY';
+  message: string;
+  temperature: number | null;
+  humidity: number | null;
+  thresholdValue: number | null;
+  createdAt: Date;
+};
+
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -138,6 +149,15 @@ export class WsGateway
     this.server.to(this.getGardenRoom(data.gardenId)).emit('sensor.updated', data);
     this.logger.log(
       `Emit sensor.updated for garden=${data.gardenId}: ${JSON.stringify(data)}`,
+    );
+  }
+
+  emitNotificationCreated(data: NotificationRealtimePayload) {
+    this.server
+      .to(this.getGardenRoom(data.gardenId))
+      .emit('notification.created', data);
+    this.logger.log(
+      `Emit notification.created for garden=${data.gardenId}: ${JSON.stringify(data)}`,
     );
   }
 

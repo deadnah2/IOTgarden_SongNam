@@ -363,6 +363,7 @@ Endpoint:
 
 - Nhận dữ liệu sensor qua MQTT
 - Lưu `SensorData` vào DB
+- Cảnh báo khi nhiệt độ / độ ẩm vượt ngưỡng cấu hình của garden
 - Push realtime qua WebSocket
 - Điều khiển LED qua MQTT
 
@@ -379,6 +380,10 @@ Endpoint:
 #### Sensors
 
 - `GET /sensors?gardenId=&period=day|week|month&date=optional`
+
+#### Notifications
+
+- `GET /notifications?gardenId=...`
 
 #### WebSocket
 
@@ -399,6 +404,17 @@ Endpoint:
 3. Parse payload
 4. `SensorsService` lưu `SensorData`
 5. `WsGateway` emit `sensor.updated` vào room đúng `gardenId`
+
+#### Notification threshold flow
+
+1. User gọi `PUT /gardens/:id/thresholds`
+2. Server cập nhật `temperatureThreshold` / `humidityThreshold` của garden
+3. Sensor mới đi vào qua MQTT
+4. Sau khi lưu `SensorData`, hệ thống so sánh dữ liệu mới với threshold của garden đó
+5. Nếu vượt ngưỡng:
+   - tạo `Notification` trong DB
+   - emit `notification.created` vào đúng room garden
+6. Nếu cùng loại cảnh báo lặp lại trong vòng `10 phút` thì bỏ qua để tránh spam
 
 #### WebSocket flow
 
@@ -427,6 +443,15 @@ Endpoint:
 4. Kiểm tra có record mới
 5. Test thêm `date=YYYY-MM-DD` để xem dữ liệu của ngày / tuần / tháng cụ thể
 
+#### Notification / Threshold
+
+1. `GET /gardens/:id/thresholds`
+2. `PUT /gardens/:id/thresholds`
+3. `GET /notifications?gardenId=...`
+4. Publish sensor dưới ngưỡng -> không tạo notification
+5. Publish sensor vượt ngưỡng -> tạo notification
+6. Publish tiếp trong thời gian cooldown -> không tạo thêm notification
+
 #### WebSocket
 
 1. Connect socket bằng JWT hợp lệ
@@ -450,6 +475,12 @@ Endpoint:
 - User đọc sensor garden người khác -> `403`
 - `date` sai format -> `400`
 - `period=week` bắt đầu từ thứ hai
+- `GET /notifications` thiếu `gardenId` -> `400`
+- User đọc notification của garden người khác -> `403`
+- `PUT /gardens/:id/thresholds` body rỗng -> `400`
+- Publish sensor vượt cả 2 ngưỡng -> tạo `2` notification
+- Publish sensor dưới ngưỡng -> không tạo notification
+- Publish lặp lại cùng loại trong thời gian cooldown -> không spam
 - Token WebSocket sai -> `connect_error`
 - Join sai garden -> `garden.join.error`
 - Body LED rỗng -> `400`
@@ -460,6 +491,8 @@ Endpoint:
 
 - Sensor data được lưu đúng
 - Realtime đúng room
+- Threshold cấu hình riêng theo từng garden hoạt động đúng
+- Notification chỉ được tạo khi vượt ngưỡng và không spam trong thời gian cooldown
 - Token sai bị chặn ở handshake
 - Join room có ownership check
 - LED control publish đúng ra broker

@@ -21,6 +21,7 @@ import type { AuthenticatedUser } from '../../common/interfaces/authenticated-us
 import { CreateGardenDto } from './dto/create-garden.dto';
 import { UpdateGardenDto } from './dto/update-garden.dto';
 import { UpdateLedDto } from './dto/update-led.dto';
+import { UpdateThresholdsDto } from './dto/update-thresholds.dto';
 import { GardensService } from './gardens.service';
 
 @ApiTags('Gardens')
@@ -69,6 +70,33 @@ export class GardensController {
     @Body() dto: UpdateGardenDto,
   ) {
     return this.gardensService.update(id, dto);
+  }
+
+  @UseGuards(GardenOwnershipGuard)
+  @CheckOwnership({
+    resource: 'garden',
+    source: 'param',
+    key: 'id',
+  })
+  @Get(':id/thresholds')
+  @ApiOperation({ summary: 'Get garden notification thresholds' })
+  findThresholds(@Param('id', ParseIntPipe) id: number) {
+    return this.gardensService.findThresholds(id);
+  }
+
+  @UseGuards(GardenOwnershipGuard)
+  @CheckOwnership({
+    resource: 'garden',
+    source: 'param',
+    key: 'id',
+  })
+  @Put(':id/thresholds')
+  @ApiOperation({ summary: 'Update garden notification thresholds' })
+  updateThresholds(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateThresholdsDto,
+  ) {
+    return this.gardensService.updateThresholds(id, dto);
   }
 
   @UseGuards(GardenOwnershipGuard)

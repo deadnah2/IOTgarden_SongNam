@@ -12,6 +12,7 @@ import mqttConfig from './config/mqtt.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { GardensModule } from './modules/gardens/gardens.module';
 import { MqttModule } from './modules/mqtt/mqtt.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { SensorsModule } from './modules/sensors/sensors.module';
@@ -39,6 +40,7 @@ import { PrismaModule } from './prisma/prisma.module';
     WsModule,
     SensorsModule,
     MqttModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

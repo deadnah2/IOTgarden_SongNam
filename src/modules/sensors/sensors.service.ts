@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { getPeriodRange } from '../../common/utils/period-range.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { WsGateway } from '../websocket/ws.gateway';
 import { QuerySensorsDto } from './dto/query-sensors.dto';
 import { serializeSensorData } from './utils/sensor.serializer';
@@ -15,9 +16,12 @@ type IngestSensorInput = {
 
 @Injectable()
 export class SensorsService {
+  private readonly logger = new Logger(SensorsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly wsGateway: WsGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async ingestFromMqtt(data: IngestSensorInput) {
@@ -28,6 +32,8 @@ export class SensorsService {
       },
       select: {
         id: true,
+        temperatureThreshold: true,
+        humidityThreshold: true,
       },
     });
 
@@ -46,6 +52,24 @@ export class SensorsService {
 
     const serialized = serializeSensorData(created);
     this.wsGateway.emitSensorData(serialized);
+
+    try {
+      await this.notificationsService.evaluateSensorThresholds({
+        gardenId: data.gardenId,
+        temperature: data.temperature,
+        humidity: data.humidity,
+        temperatureThreshold: garden.temperatureThreshold,
+        humidityThreshold: garden.humidityThreshold,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unknown notification evaluation error';
+      this.logger.warn(
+        `Failed to evaluate notification thresholds for garden=${data.gardenId}: ${message}`,
+      );
+    }
 
     return serialized;
   }

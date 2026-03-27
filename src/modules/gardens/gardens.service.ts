@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import type { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { pickDefinedFields } from '../../common/utils/pick-defined-fields.util';
 import { MqttService } from '../mqtt/mqtt.service';
@@ -12,6 +12,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGardenDto } from './dto/create-garden.dto';
 import { UpdateGardenDto } from './dto/update-garden.dto';
 import { UpdateLedDto } from './dto/update-led.dto';
+import { UpdateThresholdsDto } from './dto/update-thresholds.dto';
+import {
+  serializeGarden,
+  serializeGardenThresholds,
+} from './utils/garden.serializer';
 
 @Injectable()
 export class GardensService {
@@ -21,16 +26,18 @@ export class GardensService {
   ) {}
 
   async create(dto: CreateGardenDto, user: AuthenticatedUser) {
-    return this.prisma.garden.create({
+    const garden = await this.prisma.garden.create({
       data: {
         name: dto.name,
         userId: user.id,
       },
     });
+
+    return serializeGarden(garden);
   }
 
   async findAll(user: AuthenticatedUser) {
-    return this.prisma.garden.findMany({
+    const gardens = await this.prisma.garden.findMany({
       where: {
         deletedAt: null,
         ...(user.role === Role.ADMIN ? {} : { userId: user.id }),
@@ -39,6 +46,8 @@ export class GardensService {
         createdAt: 'desc',
       },
     });
+
+    return gardens.map(serializeGarden);
   }
 
   async findOne(id: number) {
@@ -53,7 +62,7 @@ export class GardensService {
       throw new NotFoundException('Garden does not exist or has been deleted');
     }
 
-    return garden;
+    return serializeGarden(garden);
   }
 
   async update(id: number, dto: UpdateGardenDto) {
@@ -69,7 +78,9 @@ export class GardensService {
       throw new BadRequestException('Need at least one field to update garden');
     }
 
-    return this.prisma.garden.update({ where: { id }, data });
+    const garden = await this.prisma.garden.update({ where: { id }, data });
+
+    return serializeGarden(garden);
   }
 
   async softDelete(id: number) {
@@ -88,13 +99,73 @@ export class GardensService {
         },
       });
 
-      return tx.garden.update({
+      const garden = await tx.garden.update({
         where: { id },
         data: {
           deletedAt,
         },
       });
+
+      return serializeGarden(garden);
     });
+  }
+
+  async findThresholds(id: number) {
+    const garden = await this.prisma.garden.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        temperatureThreshold: true,
+        humidityThreshold: true,
+      },
+    });
+
+    if (!garden) {
+      throw new NotFoundException('Garden does not exist or has been deleted');
+    }
+
+    return serializeGardenThresholds(garden);
+  }
+
+  async updateThresholds(id: number, dto: UpdateThresholdsDto) {
+    await this.findThresholds(id);
+
+    const hasTemperatureThreshold = dto.temperatureThreshold !== undefined;
+    const hasHumidityThreshold = dto.humidityThreshold !== undefined;
+
+    if (!hasTemperatureThreshold && !hasHumidityThreshold) {
+      throw new BadRequestException(
+        'At least one threshold field must be provided',
+      );
+    }
+
+    const data: Prisma.GardenUpdateInput = {
+      ...(hasTemperatureThreshold
+        ? {
+            temperatureThreshold: new Prisma.Decimal(dto.temperatureThreshold!),
+          }
+        : {}),
+      ...(hasHumidityThreshold
+        ? {
+            humidityThreshold: new Prisma.Decimal(dto.humidityThreshold!),
+          }
+        : {}),
+    };
+
+    const garden = await this.prisma.garden.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        temperatureThreshold: true,
+        humidityThreshold: true,
+      },
+    });
+
+    return serializeGardenThresholds(garden);
   }
 
   async updateLedStates(
@@ -131,11 +202,13 @@ export class GardensService {
       );
     }
 
-    return this.prisma.garden.update({
+    const garden = await this.prisma.garden.update({
       where: { id },
       data: {
         ledSyncedAt: new Date(),
       },
     });
+
+    return serializeGarden(garden);
   }
 }
