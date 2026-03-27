@@ -51,14 +51,14 @@ export class SensorsService {
   }
 
   async findByGardenAndPeriod(query: QuerySensorsDto) {
-    const range = getPeriodRange(query.period);
+    const range = getPeriodRange(query.period, query.date);
 
     const rows = await this.prisma.sensorData.findMany({
       where: {
         gardenId: query.gardenId,
         recordedAt: {
           gte: range.start,
-          lte: range.end,
+          lt: range.end,
         },
         garden: {
           deletedAt: null,

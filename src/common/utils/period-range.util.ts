@@ -1,13 +1,23 @@
 import { Period } from '../enums/period.enum';
 
-export function getPeriodRange(period: Period) {
-  const now = new Date();
-  const start = new Date(now);
-  const end = new Date(now);
+function parseLocalBaseDate(date?: string) {
+  if (!date) {
+    return new Date();
+  }
+
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+export function getPeriodRange(period: Period, date?: string) {
+  const baseDate = parseLocalBaseDate(date);
+  const start = new Date(baseDate);
+  const end = new Date(baseDate);
 
   if (period === Period.DAY) {
     start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
+    end.setHours(0, 0, 0, 0);
+    end.setDate(end.getDate() + 1);
     return { start, end };
   }
 
@@ -19,15 +29,15 @@ export function getPeriodRange(period: Period) {
     start.setHours(0, 0, 0, 0);
 
     end.setTime(start.getTime());
-    end.setDate(end.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
+    end.setDate(end.getDate() + 7);
     return { start, end };
   }
 
   start.setDate(1);
   start.setHours(0, 0, 0, 0);
 
-  end.setMonth(end.getMonth() + 1, 0);
-  end.setHours(23, 59, 59, 999);
+  end.setDate(1);
+  end.setHours(0, 0, 0, 0);
+  end.setMonth(end.getMonth() + 1);
   return { start, end };
 }

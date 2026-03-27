@@ -315,11 +315,17 @@ quantityOut <= quantityIn
 - Nguồn dữ liệu: `PriceHistory`
 - Trả về danh sách record, không aggregate
 - Hỗ trợ `period=day|week|month`
-- Hiện tại lấy theo kỳ hiện tại tính từ thời điểm gọi API
+- Hỗ trợ thêm `date=YYYY-MM-DD` để chọn mốc thời gian cụ thể
+- Nếu không truyền `date` thì mặc định dùng ngày hiện tại theo giờ local
+- `period=week` tính theo tuần bắt đầu từ `Monday`
+- Thời gian được tính theo giờ local của server, không dùng UTC để xác định range
 
 `GET /all/price`
 - Nguồn dữ liệu: `Sale`
 - Dùng để tổng hợp doanh thu theo thời gian
+- Hỗ trợ `period=day|week|month`
+- Hỗ trợ thêm `date=YYYY-MM-DD` để chọn ngày / tuần / tháng cụ thể
+- Đây là endpoint tổng hợp theo đúng `period`, không phải timeline breakdown bên trong period
 
 ### 6.8. MQTT, Sensor, WebSocket
 
@@ -404,12 +410,12 @@ Ghi chú:
 ### 8.4. Sales & Reports
 
 - `POST /sales`
-- `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
-- `GET /all/price?gardenId=&period=day|week|month`
+- `GET /price?gardenId=&period=day|week|month&date=optional&vegetableId=optional`
+- `GET /all/price?gardenId=&period=day|week|month&date=optional`
 
 ### 8.5. Sensors
 
-- `GET /sensors?gardenId=&period=day|week|month`
+- `GET /sensors?gardenId=&period=day|week|month&date=optional`
 
 ### 8.6. WebSocket
 
@@ -425,3 +431,5 @@ Socket.IO workflow:
 - MQTT broker phải cấu hình đúng trong `.env`
 - WebSocket auth hiện dùng handshake middleware
 - Nếu token sai, client sẽ nhận lỗi theo cơ chế `connect_error` của Socket.IO
+- Các API query theo thời gian hiện hỗ trợ thêm `date=YYYY-MM-DD`
+- `period=week` được tính từ thứ hai theo giờ local của server

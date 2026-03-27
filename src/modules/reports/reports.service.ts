@@ -40,13 +40,13 @@ export class ReportsService {
       }
     }
 
-    const range = getPeriodRange(query.period);
+    const range = getPeriodRange(query.period, query.date);
 
     const rows = await this.prisma.priceHistory.findMany({
       where: {
         createdAt: {
           gte: range.start,
-          lte: range.end,
+          lt: range.end,
         },
         vegetable: {
           gardenId: query.gardenId,
@@ -77,6 +77,8 @@ export class ReportsService {
   }
 
   async getRevenueReport(query: RevenueReportQueryDto) {
+    const range = getPeriodRange(query.period, query.date);
+
     const rows = await this.prisma.$queryRaw<RevenueReportRow[]>(Prisma.sql`
       SELECT
         date_trunc(${query.period}, s."soldAt") AS "periodStart",
@@ -85,6 +87,8 @@ export class ReportsService {
         SUM(s."totalPrice")::text AS "totalRevenue"
       FROM "Sale" s
       WHERE s."gardenId" = ${query.gardenId}
+        AND s."soldAt" >= ${range.start}
+        AND s."soldAt" < ${range.end}
       GROUP BY 1
       ORDER BY 1 ASC
     `);

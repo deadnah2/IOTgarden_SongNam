@@ -28,8 +28,8 @@ model User {
   name      String
   password  String
   role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   gardens   Garden[]
 }
@@ -41,10 +41,10 @@ model Garden {
   led1State   LedState    @default(Off)
   led2State   LedState    @default(Off)
   led3State   LedState    @default(Off)
-  ledSyncedAt DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  deletedAt   DateTime?
+  ledSyncedAt DateTime?   @db.Timestamptz(3)
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?   @db.Timestamptz(3)
 
   user        User         @relation(fields: [userId], references: [id])
   vegetables  Vegetable[]
@@ -60,9 +60,9 @@ model Vegetable {
   quantityOut  Decimal        @default(0) @db.Decimal(10, 2)
   price        Decimal?       @db.Decimal(10, 2)
   gardenId     Int
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  deletedAt    DateTime?
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime       @updatedAt @db.Timestamptz(3)
+  deletedAt    DateTime?      @db.Timestamptz(3)
 
   garden       Garden         @relation(fields: [gardenId], references: [id], onDelete: Cascade)
   sales        Sale[]
@@ -80,7 +80,7 @@ model PriceHistory {
   vegetableId Int
   price       Decimal?     @db.Decimal(10, 2)
   action      PriceAction
-  createdAt   DateTime     @default(now())
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
 
   vegetable   Vegetable    @relation(fields: [vegetableId], references: [id], onDelete: Cascade)
 
@@ -94,7 +94,7 @@ model Sale {
   quantity    Decimal    @db.Decimal(10, 2)
   unitPrice   Decimal    @db.Decimal(10, 2)
   totalPrice  Decimal    @db.Decimal(14, 2)
-  soldAt      DateTime   @default(now())
+  soldAt      DateTime   @default(now()) @db.Timestamptz(3)
 
   vegetable   Vegetable  @relation(fields: [vegetableId, gardenId], references: [id, gardenId])
 
@@ -107,7 +107,7 @@ model SensorData {
   gardenId    Int
   temperature Decimal   @db.Decimal(5, 2)
   humidity    Decimal   @db.Decimal(5, 2)
-  recordedAt  DateTime  @default(now())
+  recordedAt  DateTime  @default(now()) @db.Timestamptz(3)
 
   garden      Garden    @relation(fields: [gardenId], references: [id], onDelete: Cascade)
 

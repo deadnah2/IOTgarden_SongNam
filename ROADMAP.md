@@ -281,8 +281,8 @@ Endpoint:
 
 #### Reports
 
-- `GET /price?gardenId=&period=day|week|month&vegetableId=optional`
-- `GET /all/price?gardenId=&period=day|week|month`
+- `GET /price?gardenId=&period=day|week|month&date=optional&vegetableId=optional`
+- `GET /all/price?gardenId=&period=day|week|month&date=optional`
 
 ### 6.3. Logic chính
 
@@ -302,10 +302,16 @@ Endpoint:
   - trả danh sách record, không aggregate
   - filter theo `gardenId`
   - `vegetableId` là optional
+  - `date` là optional
+  - nếu không truyền `date` thì dùng ngày hiện tại theo giờ local
+  - `week` bắt đầu từ thứ hai
 
 - `GET /all/price`
   - nguồn dữ liệu: `Sale`
   - aggregate doanh thu theo `day|week|month`
+  - `date` là optional
+  - nếu không truyền `date` thì dùng ngày hiện tại theo giờ local
+  - endpoint này trả tổng hợp theo đúng `period`, không breakdown chi tiết bên trong period
 
 ### 6.4. Cách test tay
 
@@ -321,9 +327,10 @@ Endpoint:
 
 #### Reports
 
-1. `GET /price` với `gardenId`
-2. `GET /price` với `gardenId + vegetableId`
-3. `GET /all/price` theo `period`
+1. `GET /price` với `gardenId + period`
+2. `GET /price` với `gardenId + period + date`
+3. `GET /price` với `gardenId + vegetableId + date`
+4. `GET /all/price` với `gardenId + period + date`
 
 #### Edge cases nên test
 
@@ -335,6 +342,12 @@ Endpoint:
 - `GET /price` thiếu `gardenId` -> `400`
 - `GET /price` hỏi `vegetableId` không thuộc `gardenId` -> `400`
 - `GET /all/price` garden người khác -> `403`
+- `date` sai format -> `400`
+- test tháng ở mốc:
+  - `date=2026-01-31&period=month`
+  - `date=2026-02-01&period=month`
+- test tuần cắt qua tháng:
+  - `date=2026-01-26&period=week`
 
 ### 6.5. Kết quả mong đợi
 
@@ -365,7 +378,7 @@ Endpoint:
 
 #### Sensors
 
-- `GET /sensors?gardenId=&period=day|week|month`
+- `GET /sensors?gardenId=&period=day|week|month&date=optional`
 
 #### WebSocket
 
@@ -412,6 +425,7 @@ Endpoint:
 2. Dùng MQTTX publish sensor message vào topic sensor
 3. Gọi lại `GET /sensors`
 4. Kiểm tra có record mới
+5. Test thêm `date=YYYY-MM-DD` để xem dữ liệu của ngày / tuần / tháng cụ thể
 
 #### WebSocket
 
@@ -434,6 +448,8 @@ Endpoint:
 - MQTT payload sai schema -> không lưu DB
 - `GET /sensors` thiếu `gardenId` -> `400`
 - User đọc sensor garden người khác -> `403`
+- `date` sai format -> `400`
+- `period=week` bắt đầu từ thứ hai
 - Token WebSocket sai -> `connect_error`
 - Join sai garden -> `garden.join.error`
 - Body LED rỗng -> `400`
