@@ -68,7 +68,6 @@ npm run prisma:studio
 | `MQTT_BROKER_URL` | URL broker MQTT / HiveMQ |
 | `MQTT_USERNAME` | Username đăng nhập broker MQTT |
 | `MQTT_PASSWORD` | Password đăng nhập broker MQTT |
-| `MQTT_CLIENT_ID` | Client ID dùng khi app kết nối broker |
 
 Ghi chú:
 - File mẫu nằm ở `.env.example`

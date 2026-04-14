@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import mqtt, { MqttClient } from 'mqtt';
 import { SensorsService } from '../sensors/sensors.service';
@@ -7,7 +7,7 @@ import { SensorPayloadParserHelper } from './helpers/sensor-payload-parser.helpe
 import type { PublishLedCommandInput } from './interfaces/publish-led-command-input.interface';
 
 @Injectable()
-export class MqttService implements OnModuleInit, OnModuleDestroy {
+export class MqttService implements OnModuleDestroy {
   private readonly logger = new Logger(MqttService.name);
   private client: MqttClient | null = null;
 
@@ -17,16 +17,18 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     private readonly sensorPayloadParserHelper: SensorPayloadParserHelper,
   ) {}
 
-  onModuleInit() {
+  startSensorListener() {
+    if (this.client) {
+      return;
+    }
+
     const brokerUrl = this.configService.getOrThrow<string>('mqtt.brokerUrl');
     const username = this.configService.get<string>('mqtt.username');
     const password = this.configService.get<string>('mqtt.password');
-    const clientId = this.configService.get<string>('mqtt.clientId');
 
     this.client = mqtt.connect(brokerUrl, {
       username,
       password,
-      clientId,
       reconnectPeriod: 3000,
     });
 
