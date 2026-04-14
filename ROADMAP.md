@@ -415,6 +415,7 @@ Endpoint:
    - tạo `Notification` trong DB
    - emit `notification.created` vào đúng room garden
 6. Nếu cùng loại cảnh báo lặp lại trong vòng `10 phút` thì bỏ qua để tránh spam
+7. Cooldown cảnh báo được cache bằng Redis TTL theo từng cặp `gardenId + type`
 
 #### WebSocket flow
 

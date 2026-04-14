@@ -9,6 +9,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import appConfig from './config/app.config';
 import jwtConfig from './config/jwt.config';
 import mqttConfig from './config/mqtt.config';
+import redisConfig from './config/redis.config';
+import { RedisModule } from './common/cache/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GardensModule } from './modules/gardens/gardens.module';
 import { MqttModule } from './modules/mqtt/mqtt.module';
@@ -27,9 +29,10 @@ import { PrismaModule } from './prisma/prisma.module';
       isGlobal: true,
       cache: true,
       envFilePath: '.env',
-      load: [appConfig, jwtConfig, mqttConfig],
+      load: [appConfig, jwtConfig, mqttConfig, redisConfig],
     }),
     CommonModule,
+    RedisModule,
     PrismaModule,
     UsersModule,
     AuthModule,

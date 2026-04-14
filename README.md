@@ -27,6 +27,7 @@ Chi tiết tiến độ triển khai, phạm vi từng phase và cách test tay 
 - API docs: `Swagger`
 - IoT: `MQTT`
 - Realtime: `WebSocket / Socket.IO`
+- Cache: `Redis`
 
 ## 3. Cách chạy dự án
 
@@ -68,6 +69,7 @@ npm run prisma:studio
 | `MQTT_BROKER_URL` | URL broker MQTT / HiveMQ |
 | `MQTT_USERNAME` | Username đăng nhập broker MQTT |
 | `MQTT_PASSWORD` | Password đăng nhập broker MQTT |
+| `REDIS_URL` | URL Redis dùng để cache cooldown cảnh báo |
 
 Ghi chú:
 - File mẫu nằm ở `.env.example`
@@ -362,6 +364,7 @@ Luồng WebSocket:
 - Có cooldown `10 phút` cho từng cặp:
   - `gardenId + HIGH_TEMPERATURE`
   - `gardenId + HIGH_HUMIDITY`
+- Cooldown được lưu bằng Redis TTL để tránh query DB lặp lại khi sensor vượt ngưỡng liên tục
 - Nếu cùng loại cảnh báo lặp lại trong thời gian cooldown thì không tạo thêm notification mới
 
 ### 6.10. LED

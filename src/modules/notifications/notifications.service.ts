@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
+import { RedisService } from '../../common/cache/redis.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WsGateway } from '../websocket/ws.gateway';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
@@ -9,12 +10,13 @@ import { serializeNotification } from './utils/notification.serializer';
 
 @Injectable()
 export class NotificationsService {
-  private static readonly COOLDOWN_MS = 10 * 60 * 1000;
+  private static readonly COOLDOWN_SECONDS = 10 * 60;
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly wsGateway: WsGateway,
+    private readonly redisService: RedisService,
   ) {}
 
   async evaluateSensorThresholds(input: EvaluateSensorThresholdsInput) {
@@ -71,43 +73,43 @@ export class NotificationsService {
       return null;
     }
 
-    const latest = await this.prisma.notification.findFirst({
-      where: {
-        gardenId: input.gardenId,
-        type: input.type,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      select: {
-        createdAt: true,
-      },
-    });
+    const cooldownKey = this.getCooldownKey(input.gardenId, input.type);
+    const canCreateNotification = await this.redisService.setIfNotExistsWithTtl(
+      cooldownKey,
+      '1',
+      NotificationsService.COOLDOWN_SECONDS,
+    );
 
-    if (
-      latest &&
-      Date.now() - latest.createdAt.getTime() < NotificationsService.COOLDOWN_MS
-    ) {
+    if (!canCreateNotification) {
       this.logger.debug(
         `Skip notification for garden=${input.gardenId}, type=${input.type} because cooldown is active`,
       );
       return null;
     }
 
-    const created = await this.prisma.notification.create({
-      data: {
-        gardenId: input.gardenId,
-        type: input.type,
-        message: input.message,
-        temperature: new Prisma.Decimal(input.temperature),
-        humidity: new Prisma.Decimal(input.humidity),
-        thresholdValue: new Prisma.Decimal(thresholdValue),
-      },
-    });
+    try {
+      const created = await this.prisma.notification.create({
+        data: {
+          gardenId: input.gardenId,
+          type: input.type,
+          message: input.message,
+          temperature: new Prisma.Decimal(input.temperature),
+          humidity: new Prisma.Decimal(input.humidity),
+          thresholdValue: new Prisma.Decimal(thresholdValue),
+        },
+      });
 
-    const serialized = serializeNotification(created);
-    this.wsGateway.emitNotificationCreated(serialized);
+      const serialized = serializeNotification(created);
+      this.wsGateway.emitNotificationCreated(serialized);
 
-    return serialized;
+      return serialized;
+    } catch (error) {
+      await this.redisService.delete(cooldownKey);
+      throw error;
+    }
+  }
+
+  private getCooldownKey(gardenId: number, type: NotificationType) {
+    return `garden-sn:notification-cooldown:${gardenId}:${type}`;
   }
 }
