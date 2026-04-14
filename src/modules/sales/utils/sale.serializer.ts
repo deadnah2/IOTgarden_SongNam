@@ -1,14 +1,4 @@
-import { Prisma } from '@prisma/client';
-
-type SaleLike = {
-  id: number;
-  vegetableId: number;
-  gardenId: number;
-  quantity: Prisma.Decimal;
-  unitPrice: Prisma.Decimal;
-  totalPrice: Prisma.Decimal;
-  soldAt: Date;
-};
+import type { SaleLike } from '../interfaces/sale-like.interface';
 
 export function serializeSale(sale: SaleLike) {
   return {

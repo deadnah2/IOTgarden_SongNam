@@ -4,17 +4,11 @@ import { getPeriodRange } from '../../common/utils/period-range.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PriceReportQueryDto } from './dto/price-report-query.dto';
 import { RevenueReportQueryDto } from './dto/revenue-report-query.dto';
+import type { RevenueReportRow } from './interfaces/revenue-report-row.interface';
 import {
   serializePriceHistoryRow,
   serializeRevenueReportRow,
 } from './utils/report.serializer';
-
-type RevenueReportRow = {
-  periodStart: Date;
-  salesCount: bigint;
-  totalQuantity: string | null;
-  totalRevenue: string | null;
-};
 
 @Injectable()
 export class ReportsService {

@@ -1,12 +1,4 @@
-import { Prisma } from '@prisma/client';
-
-type SensorLike = {
-  id: number;
-  gardenId: number;
-  temperature: Prisma.Decimal;
-  humidity: Prisma.Decimal;
-  recordedAt: Date;
-};
+import type { SensorLike } from '../interfaces/sensor-like.interface';
 
 export function serializeSensorData(sensor: SensorLike) {
   return {

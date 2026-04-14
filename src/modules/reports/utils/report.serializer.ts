@@ -1,4 +1,6 @@
-type NullableNumeric = string | number | bigint | null;
+import type { NullableNumeric } from '../interfaces/nullable-numeric.type';
+import type { PriceHistoryReportRow } from '../interfaces/price-history-report-row.interface';
+import type { RevenueReportRow } from '../interfaces/revenue-report-row.interface';
 
 function toNumber(value: NullableNumeric) {
   if (value === null) {
@@ -8,16 +10,7 @@ function toNumber(value: NullableNumeric) {
   return Number(value);
 }
 
-export function serializePriceHistoryRow(row: {
-  id: number;
-  vegetableId: number;
-  action: string;
-  price: { toNumber(): number } | null;
-  createdAt: Date;
-  vegetable: {
-    name: string;
-  };
-}) {
+export function serializePriceHistoryRow(row: PriceHistoryReportRow) {
   return {
     id: row.id,
     vegetableId: row.vegetableId,
@@ -28,12 +21,7 @@ export function serializePriceHistoryRow(row: {
   };
 }
 
-export function serializeRevenueReportRow(row: {
-  periodStart: Date;
-  salesCount: bigint;
-  totalQuantity: string | null;
-  totalRevenue: string | null;
-}) {
+export function serializeRevenueReportRow(row: RevenueReportRow) {
   return {
     periodStart: row.periodStart,
     salesCount: Number(row.salesCount),

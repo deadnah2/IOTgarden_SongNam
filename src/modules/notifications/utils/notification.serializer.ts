@@ -1,15 +1,4 @@
-import { NotificationType, Prisma } from '@prisma/client';
-
-type NotificationLike = {
-  id: number;
-  gardenId: number;
-  type: NotificationType;
-  message: string;
-  temperature: Prisma.Decimal | null;
-  humidity: Prisma.Decimal | null;
-  thresholdValue: Prisma.Decimal | null;
-  createdAt: Date;
-};
+import type { NotificationLike } from '../interfaces/notification-like.interface';
 
 export function serializeNotification(notification: NotificationLike) {
   return {

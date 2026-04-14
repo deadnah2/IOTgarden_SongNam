@@ -1,19 +1,4 @@
-import { Prisma } from '@prisma/client';
-
-type GardenLike = {
-  id: number;
-  name: string;
-  userId: number;
-  temperatureThreshold: Prisma.Decimal | null;
-  humidityThreshold: Prisma.Decimal | null;
-  led1State: 'On' | 'Off';
-  led2State: 'On' | 'Off';
-  led3State: 'On' | 'Off';
-  ledSyncedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};
+import type { GardenLike } from '../interfaces/garden-like.interface';
 
 export function serializeGarden(garden: GardenLike) {
   return {

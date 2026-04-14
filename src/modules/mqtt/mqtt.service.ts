@@ -4,14 +4,7 @@ import mqtt, { MqttClient } from 'mqtt';
 import { SensorsService } from '../sensors/sensors.service';
 import { MQTT_TOPICS } from './mqtt.constants';
 import { SensorPayloadParserHelper } from './helpers/sensor-payload-parser.helper';
-
-type PublishLedCommandInput = {
-  gardenId: number;
-  userId: number;
-  led1State: 'On' | 'Off';
-  led2State: 'On' | 'Off';
-  led3State: 'On' | 'Off';
-};
+import type { PublishLedCommandInput } from './interfaces/publish-led-command-input.interface';
 
 @Injectable()
 export class MqttService implements OnModuleInit, OnModuleDestroy {

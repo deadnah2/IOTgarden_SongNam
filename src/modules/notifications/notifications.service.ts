@@ -3,15 +3,9 @@ import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WsGateway } from '../websocket/ws.gateway';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
+import type { EvaluateSensorThresholdsInput } from './interfaces/evaluate-sensor-thresholds-input.interface';
+import type { ThresholdNotificationInput } from './interfaces/threshold-notification-input.interface';
 import { serializeNotification } from './utils/notification.serializer';
-
-type EvaluateSensorThresholdsInput = {
-  gardenId: number;
-  temperature: number;
-  humidity: number;
-  temperatureThreshold: Prisma.Decimal | null;
-  humidityThreshold: Prisma.Decimal | null;
-};
 
 @Injectable()
 export class NotificationsService {
@@ -64,15 +58,9 @@ export class NotificationsService {
     return rows.map(serializeNotification);
   }
 
-  private async createThresholdNotificationIfNeeded(input: {
-    gardenId: number;
-    type: NotificationType;
-    currentValue: number;
-    threshold: Prisma.Decimal | null;
-    temperature: number;
-    humidity: number;
-    message: string;
-  }) {
+  private async createThresholdNotificationIfNeeded(
+    input: ThresholdNotificationInput,
+  ) {
     if (!input.threshold) {
       return null;
     }

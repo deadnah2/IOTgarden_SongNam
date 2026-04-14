@@ -5,14 +5,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WsGateway } from '../websocket/ws.gateway';
 import { QuerySensorsDto } from './dto/query-sensors.dto';
+import type { IngestSensorInput } from './interfaces/ingest-sensor-input.interface';
 import { serializeSensorData } from './utils/sensor.serializer';
-
-type IngestSensorInput = {
-  gardenId: number;
-  temperature: number;
-  humidity: number;
-  recordedAt?: Date;
-};
 
 @Injectable()
 export class SensorsService {

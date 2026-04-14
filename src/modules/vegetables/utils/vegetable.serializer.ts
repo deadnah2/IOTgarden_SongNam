@@ -1,16 +1,5 @@
 import { Prisma } from '@prisma/client';
-
-type VegetableLike = {
-  id: number;
-  name: string;
-  quantityIn: Prisma.Decimal;
-  quantityOut: Prisma.Decimal;
-  price: Prisma.Decimal | null;
-  gardenId: number;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};
+import type { VegetableLike } from '../interfaces/vegetable-like.interface';
 
 export function serializeVegetable(vegetable: VegetableLike) {
   return {

@@ -2,14 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { IncomingSensorPayloadDto } from '../dto/incoming-sensor-payload.dto';
-
-type ParseResult =
-  | { ok: true; data: IncomingSensorPayloadDto }
-  | { ok: false; error: string };
+import type { SensorPayloadParseResult } from '../interfaces/sensor-payload-parse-result.interface';
 
 @Injectable()
 export class SensorPayloadParserHelper {
-  parse(payload: unknown): ParseResult {
+  parse(payload: unknown): SensorPayloadParseResult {
     const convertedPayload = this.convertPayload(payload);
 
     if (convertedPayload === null) {

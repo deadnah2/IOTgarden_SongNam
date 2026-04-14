@@ -22,25 +22,8 @@ import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { GardenAccessService } from '../../common/services/garden-access.service';
 import { UsersService } from '../users/users.service';
 import { JoinGardenDto } from './dto/join-garden.dto';
-
-type SensorRealtimePayload = {
-  id: number;
-  gardenId: number;
-  temperature: number;
-  humidity: number;
-  recordedAt: Date;
-};
-
-type NotificationRealtimePayload = {
-  id: number;
-  gardenId: number;
-  type: 'HIGH_TEMPERATURE' | 'HIGH_HUMIDITY';
-  message: string;
-  temperature: number | null;
-  humidity: number | null;
-  thresholdValue: number | null;
-  createdAt: Date;
-};
+import type { NotificationRealtimePayload } from './interfaces/notification-realtime-payload.interface';
+import type { SensorRealtimePayload } from './interfaces/sensor-realtime-payload.interface';
 
 @WebSocketGateway({
   cors: {

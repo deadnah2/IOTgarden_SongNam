@@ -1,13 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Role } from '@prisma/client';
-
-type CreateUserInput = {
-  email: string;
-  name: string;
-  password: string;
-  role?: Role;
-};
+import type { CreateUserInput } from './interfaces/create-user-input.interface';
 
 @Injectable()
 export class UsersService {
